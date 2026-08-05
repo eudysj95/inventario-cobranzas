@@ -1,0 +1,12 @@
+-- ============================================================================
+-- Inventario — seed placeholder
+--
+-- The only seeded record is the single shared admin. Credentials come from
+-- environment variables (ADMIN_USERNAME / ADMIN_PASSWORD) and are inserted by
+-- the server bootstrap (see server/src/seed.js) with a bcrypt hash — never
+-- hardcoded in this file. Seeding is idempotent: it only runs when the
+-- `admins` table is empty.
+--
+-- No other seed data exists by design; all records are created through the
+-- API in later slices.
+-- ============================================================================
