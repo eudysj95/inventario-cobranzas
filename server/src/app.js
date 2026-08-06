@@ -2,6 +2,7 @@ import express from 'express';
 import healthRouter from './routes/health.js';
 import authRouter from './routes/auth.js';
 import productsRouter from './routes/products.js';
+import customersRouter from './routes/customers.js';
 
 /**
  * Build the Express app. The pool is injected so tests can supply their own
@@ -24,6 +25,7 @@ export function createApp({ pool } = {}) {
 
   // Core catalog routes (auth-guarded inside the routers).
   app.use('/api/products', productsRouter(pool));
+  app.use('/api/customers', customersRouter(pool));
 
   // JSON 404 for unknown API routes (keeps the SPA fallback for / untouched).
   app.use('/api', (_req, res) => {
