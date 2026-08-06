@@ -1,0 +1,239 @@
+// Credit-sales route tests (task 4.3).
+//
+// Two layers, mirroring products.test.js:
+//   * Auth-guard + input-validation tests need NO database.
+//   * TXN semantics (per-line stock decrement, shared sale_id, atomic
+//     rollback when any line is short) are DB-gated and skip gracefully
+//     when no Postgres is reachable.
+import { after, test } from 'node:test';
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import request from 'supertest';
+import { createApp } from '../src/app.js';
+import { runMigration } from '../src/db.js';
+import { signToken } from '../src/auth.js';
+import { canReachDb, createTestPool, testApp } from './helpers.js';
+
+process.env.JWT_SECRET = 'credit-sales-test-secret';
+
+const app = createApp({ pool: null });
+const authCookie = `token=${signToken({ id: 'u1', username: 'admin' })}`;
+
+const AUTHED = {
+  get: (url) => request(app).get(url).set('Cookie', authCookie),
+  post: (url) => request(app).post(url).set('Cookie', authCookie),
+};
+
+// --- Auth guard (no database required) ------------------------------------
+
+test('all credit-sales routes answer 401 without a session', async () => {
+  const id = '00000000-0000-0000-0000-000000000000';
+  const cases = [
+    () => request(app).post('/api/credit-sales').send({}),
+    () => request(app).get(`/api/credit-sales/${id}`),
+  ];
+  for (const make of cases) {
+    const res = await make();
+    assert.equal(res.status, 401);
+    assert.deepEqual(res.body, { error: 'Unauthorized' });
+  }
+});
+
+// --- Input validation (no database required) ------------------------------
+
+test('POST /api/credit-sales validates input before touching the database', async () => {
+  const uuid = '00000000-0000-0000-0000-000000000000';
+  const valid = { customerId: uuid, lines: [{ productId: uuid, units: 1 }] };
+
+  const badCustomer = await AUTHED.post('/api/credit-sales').send({
+    ...valid,
+    customerId: 'not-a-uuid',
+  });
+  assert.equal(badCustomer.status, 400);
+  assert.equal(badCustomer.body.error, 'customerId must be a valid UUID');
+
+  const noLines = await AUTHED.post('/api/credit-sales').send({ customerId: uuid });
+  assert.equal(noLines.status, 400);
+  assert.equal(noLines.body.error, 'lines must be a non-empty array');
+
+  const emptyLines = await AUTHED.post('/api/credit-sales').send({
+    customerId: uuid,
+    lines: [],
+  });
+  assert.equal(emptyLines.status, 400);
+
+  const badUnits = await AUTHED.post('/api/credit-sales').send({
+    customerId: uuid,
+    lines: [{ productId: uuid, units: 0 }],
+  });
+  assert.equal(badUnits.status, 400);
+  assert.equal(badUnits.body.error, 'lines[0].units must be a positive integer');
+
+  const badPrice = await AUTHED.post('/api/credit-sales').send({
+    customerId: uuid,
+    lines: [{ productId: uuid, units: 1, price: -1 }],
+  });
+  assert.equal(badPrice.status, 400);
+  assert.equal(badPrice.body.error, 'lines[0].price must be a non-negative number');
+
+  const badDueDate = await AUTHED.post('/api/credit-sales').send({
+    customerId: uuid,
+    lines: [{ productId: uuid, units: 1 }],
+    dueDate: 'not-a-date',
+  });
+  assert.equal(badDueDate.status, 400);
+  assert.equal(badDueDate.body.error, 'dueDate must be a valid date (YYYY-MM-DD)');
+});
+
+test('non-UUID credit-sale id is answered 404 without touching the database', async () => {
+  const res = await AUTHED.get('/api/credit-sales/not-a-uuid');
+  assert.equal(res.status, 404);
+});
+
+// --- DB-gated: skipped gracefully when no Postgres is available ------------
+
+const probePool = createTestPool();
+const dbAvailable = await canReachDb(probePool);
+if (probePool) await probePool.end();
+
+const SKIP = !dbAvailable && 'no local/test Postgres — set TEST_DATABASE_URL';
+
+function dbContext() {
+  const pool = createTestPool();
+  after(() => pool.end());
+  return pool;
+}
+
+const unique = (prefix) => `${prefix}-${randomUUID().slice(0, 8)}`;
+
+async function createProduct(api, name, price, quantity = 0) {
+  const res = await request(api)
+    .post('/api/products')
+    .set('Cookie', authCookie)
+    .send({ name, price, quantity });
+  assert.equal(res.status, 201);
+  return res.body.product.id;
+}
+
+async function insertCustomer(pool, id, name) {
+  await pool.query('INSERT INTO customers (id, name) VALUES ($1, $2)', [id, name]);
+}
+
+test(
+  'POST /api/credit-sales decrements stock per line and groups debts by sale_id',
+  { skip: SKIP },
+  async () => {
+    const pool = dbContext();
+    await runMigration(pool);
+    const api = testApp(pool);
+
+    const customerId = randomUUID();
+    await insertCustomer(pool, customerId, 'Credit Customer');
+    const p1 = await createProduct(api, unique('cs-product-a'), 10, 5);
+    const p2 = await createProduct(api, unique('cs-product-b'), 20, 4);
+
+    const res = await request(api)
+      .post('/api/credit-sales')
+      .set('Cookie', authCookie)
+      .send({
+        customerId,
+        lines: [
+          { productId: p1, units: 2 },
+          { productId: p2, units: 1, price: 25 },
+        ],
+        dueDate: '2026-11-30',
+      });
+
+    assert.equal(res.status, 201);
+    const sale = res.body.sale;
+    assert.equal(sale.customer_id, customerId);
+    assert.equal(sale.customer_name, 'Credit Customer');
+    assert.equal(sale.lines.length, 2);
+    assert.equal(sale.total, 45, 'catalog price 10*2 + explicit line price 25*1');
+
+    const [line1, line2] = sale.lines;
+    assert.equal(line1.amount, 20, 'catalog price applied when price omitted');
+    assert.equal(line1.balance, 20, 'open debt starts at its full amount');
+    assert.equal(line1.status, 'open');
+    assert.equal(line1.due_date, '2026-11-30');
+    assert.equal(line2.amount, 25);
+
+    const d1 = await AUTHED.get(`/api/products/${p1}`);
+    assert.equal(d1.body.product.quantity, 3, 'line 1 units decremented');
+    assert.equal(d1.body.product.credit_units, 2);
+    const d2 = await AUTHED.get(`/api/products/${p2}`);
+    assert.equal(d2.body.product.quantity, 3, 'line 2 units decremented');
+  }
+);
+
+test(
+  'POST /api/credit-sales rolls back everything when any line has insufficient stock',
+  { skip: SKIP },
+  async () => {
+    const pool = dbContext();
+    await runMigration(pool);
+    const api = testApp(pool);
+
+    const customerId = randomUUID();
+    await insertCustomer(pool, customerId, 'Atomic Customer');
+    const okProduct = await createProduct(api, unique('atomic-ok'), 10, 5);
+    const shortProduct = await createProduct(api, unique('atomic-short'), 10, 1);
+
+    const res = await request(api)
+      .post('/api/credit-sales')
+      .set('Cookie', authCookie)
+      .send({
+        customerId,
+        lines: [
+          { productId: okProduct, units: 2 },
+          { productId: shortProduct, units: 3 },
+        ],
+      });
+
+    assert.equal(res.status, 400);
+    assert.equal(
+      res.body.error,
+      'Insufficient stock for one or more lines — nothing was recorded'
+    );
+
+    // Atomicity: the OK line's stock decrement was rolled back too.
+    const d1 = await AUTHED.get(`/api/products/${okProduct}`);
+    assert.equal(d1.body.product.quantity, 5, 'first line decrement rolled back');
+
+    const { rows } = await pool.query(
+      'SELECT COUNT(*)::int AS n FROM customer_debts WHERE customer_id = $1',
+      [customerId]
+    );
+    assert.equal(rows[0].n, 0, 'no debt rows persisted');
+  }
+);
+
+test(
+  'GET /api/credit-sales/:saleId returns the sale with its lines; unknown id is 404',
+  { skip: SKIP },
+  async () => {
+    const pool = dbContext();
+    await runMigration(pool);
+    const api = testApp(pool);
+
+    const customerId = randomUUID();
+    await insertCustomer(pool, customerId, 'Detail Credit');
+    const p1 = await createProduct(api, unique('detail-cs'), 15, 3);
+
+    const created = await request(api)
+      .post('/api/credit-sales')
+      .set('Cookie', authCookie)
+      .send({ customerId, lines: [{ productId: p1, units: 1 }] });
+    assert.equal(created.status, 201);
+
+    const res = await AUTHED.get(`/api/credit-sales/${created.body.sale.id}`);
+    assert.equal(res.status, 200);
+    assert.equal(res.body.sale.lines.length, 1);
+    assert.equal(res.body.sale.lines[0].amount, 15);
+    assert.equal(res.body.sale.total, 15);
+    assert.equal(res.body.sale.customer_name, 'Detail Credit');
+
+    const missing = await AUTHED.get(`/api/credit-sales/${randomUUID()}`);
+    assert.equal(missing.status, 404);
+  }
+);
