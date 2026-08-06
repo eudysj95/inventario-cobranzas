@@ -1,10 +1,15 @@
 import { createApp } from './app.js';
 import { getPool, runMigration } from './db.js';
 import { ensureAdmin } from './seed.js';
+import { getJwtSecret } from './auth.js';
 
 const port = Number.parseInt(process.env.PORT ?? '3001', 10);
 
 async function main() {
+  // Auth secret policy: required in production (fail-fast), dev-only
+  // fallback otherwise. Resolved before the server accepts any request.
+  getJwtSecret();
+
   const pool = getPool();
 
   // Greenfield bootstrap: apply schema + seed admin (both idempotent). A
