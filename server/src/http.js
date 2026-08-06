@@ -24,3 +24,16 @@ const UUID_RE =
 export function isUuid(value) {
   return typeof value === 'string' && UUID_RE.test(value);
 }
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * True for a strict YYYY-MM-DD calendar date. ISO parsing rejects
+ * out-of-range days/months (e.g. 2026-02-30, 2026-13-01) as Invalid Date,
+ * so the shape regex plus a parse check is sufficient.
+ */
+export function isDateString(value) {
+  if (typeof value !== 'string' || !DATE_RE.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(parsed.getTime());
+}
