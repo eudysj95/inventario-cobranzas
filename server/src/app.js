@@ -4,6 +4,8 @@ import authRouter from './routes/auth.js';
 import productsRouter from './routes/products.js';
 import customersRouter from './routes/customers.js';
 import apartadosRouter from './routes/apartados.js';
+import creditSalesRouter from './routes/credit-sales.js';
+import paymentsRouter from './routes/payments.js';
 
 /**
  * Build the Express app. The pool is injected so tests can supply their own
@@ -30,6 +32,8 @@ export function createApp({ pool } = {}) {
 
   // Sales & payments routes (auth-guarded inside the routers).
   app.use('/api/apartados', apartadosRouter(pool));
+  app.use('/api/credit-sales', creditSalesRouter(pool));
+  app.use('/api/payments', paymentsRouter(pool));
 
   // JSON 404 for unknown API routes (keeps the SPA fallback for / untouched).
   app.use('/api', (_req, res) => {
