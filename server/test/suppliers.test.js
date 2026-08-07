@@ -138,6 +138,16 @@ async function insertSupplier(pool, name) {
   return rows[0];
 }
 
+/**
+ * A date offset from today in UTC. The comparison runs against CURRENT_DATE
+ * (the Postgres server's date), so offsets must be large enough to be stable
+ * across timezones and never flip a seeded "inside horizon" row into the past.
+ */
+function dateFromNow(days) {
+  const d = new Date(Date.now() + days * 86_400_000);
+  return d.toISOString().slice(0, 10);
+}
+
 /** Seed a supplier debt directly with a chosen due date / status. */
 async function insertDebt(pool, { supplierId, amount, balance, dueDate, status = 'open' }) {
   const { rows } = await pool.query(
@@ -410,27 +420,27 @@ test(
       supplierId: supplier.id,
       amount: 40,
       balance: 40,
-      dueDate: '2020-01-01', // overdue for any real "today"
+      dueDate: dateFromNow(-100), // clearly overdue for any real "today"
     });
     const soonId = await insertDebt(pool, {
       supplierId: supplier.id,
       amount: 60,
       balance: 60,
-      dueDate: '2099-01-05', // far future, inside a 30-day horizon
+      dueDate: dateFromNow(15), // inside a 30-day horizon
     });
     // Far beyond the horizon: excluded.
     await insertDebt(pool, {
       supplierId: supplier.id,
       amount: 25,
       balance: 25,
-      dueDate: '2199-01-01',
+      dueDate: dateFromNow(60),
     });
     // Closed debt: excluded even when due inside the horizon.
     await insertDebt(pool, {
       supplierId: supplier.id,
       amount: 15,
       balance: 0,
-      dueDate: '2099-01-03',
+      dueDate: dateFromNow(10),
       status: 'closed',
     });
     // Fully paid open debt (balance 0): excluded.
@@ -438,7 +448,7 @@ test(
       supplierId: supplier.id,
       amount: 10,
       balance: 0,
-      dueDate: '2099-01-04',
+      dueDate: dateFromNow(12),
     });
 
     const res = await request(api)
