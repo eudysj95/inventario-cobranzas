@@ -124,5 +124,105 @@ export default function supplierDebtsRouter(pool) {
     return res.status(200).json({ debts: rows.map(toDebt) });
   });
 
+  router.post('/:id/pay', async (req, res) => {
+    if (!isUuid(req.params.id)) return notFound(res, 'Supplier debt not found');
+    const { amount } = req.body ?? {};
+
+    if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
+      return badRequest(res, 'amount must be a positive number');
+    }
+    const amountCents = Math.round(amount * 100);
+    if (amountCents <= 0) {
+      return badRequest(res, 'amount must be a positive number');
+    }
+
+    const result = await withTransaction(pool, async (client) => {
+      // The row lock serializes concurrent payments so the balance check
+      // cannot race two payments into an overpayment (spec: overpayment MUST
+      // be rejected).
+      const { rows } = await client.query(
+        'SELECT status, balance FROM supplier_debts WHERE id = $1 FOR UPDATE',
+        [req.params.id]
+      );
+      if (rows.length === 0) return { status: 'not-found' };
+      if (rows[0].status !== 'open') return { status: 'not-open' };
+
+      const balanceCents = Math.round(Number(rows[0].balance) * 100);
+      if (amountCents > balanceCents) return { status: 'overpayment' };
+
+      await client.query(
+        'INSERT INTO supplier_payments (debt_id, amount) VALUES ($1, $2)',
+        [req.params.id, (amountCents / 100).toFixed(2)]
+      );
+
+      // A debt's lifecycle ends at balance 0 (spec: same lifecycle as
+      // customer debts — closed and excluded from due views).
+      const newBalanceCents = balanceCents - amountCents;
+      await client.query(
+        `UPDATE supplier_debts
+         SET balance = $2,
+             status = CASE WHEN $3 THEN 'closed' ELSE status END
+         WHERE id = $1`,
+        [req.params.id, (newBalanceCents / 100).toFixed(2), newBalanceCents === 0]
+      );
+
+      const { rows: debtRows } = await client.query(
+        `${DEBT_SELECT} WHERE d.id = $1`,
+        [req.params.id]
+      );
+      return { status: 'ok', debt: debtRows[0] };
+    });
+
+    switch (result.status) {
+      case 'not-found':
+        return notFound(res, 'Supplier debt not found');
+      case 'not-open':
+        return conflict(res, 'Only open supplier debts can receive payments');
+      case 'overpayment':
+        return badRequest(
+          res,
+          'Payment exceeds the remaining balance of the supplier debt'
+        );
+      default:
+        return res.status(200).json({ debt: toDebt(result.debt) });
+    }
+  });
+
+  router.get('/due', async (req, res) => {
+    const raw = req.query.horizonDays ?? 7;
+    const horizonDays = Number(raw);
+    if (!Number.isInteger(horizonDays) || horizonDays < 0) {
+      return badRequest(res, 'horizonDays must be a non-negative integer');
+    }
+
+    // Due-payments view (task 5.2, design: "GET /api/supplier-debts/due?
+    // horizonDays | due view"): open debts with remaining balance due now,
+    // overdue, or inside the horizon — ordered by due date with
+    // overdue/soon-due highlighting flags. Overdue items are INCLUDED
+    // (due_date <= today + horizon). Closed or fully-paid debts never appear.
+    const { rows } = await pool.query(
+      `SELECT d.id, d.supplier_id, s.name AS supplier_name,
+              d.amount, d.balance, d.due_date, d.status, d.created_at,
+              (d.due_date < CURRENT_DATE) AS overdue,
+              (d.due_date >= CURRENT_DATE
+               AND d.due_date <= CURRENT_DATE + $1::int) AS soon_due
+       FROM supplier_debts d
+       JOIN suppliers s ON s.id = d.supplier_id
+       WHERE d.status = 'open'
+         AND d.balance > 0
+         AND d.due_date <= CURRENT_DATE + $1::int
+       ORDER BY d.due_date ASC, d.created_at ASC`,
+      [horizonDays]
+    );
+
+    return res.status(200).json({
+      debts: rows.map((r) => ({
+        ...r,
+        amount: Number(r.amount),
+        balance: Number(r.balance),
+      })),
+    });
+  });
+
   return router;
 }

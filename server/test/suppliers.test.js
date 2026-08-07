@@ -275,3 +275,189 @@ test(
     );
   }
 );
+
+// --- Task 5.2: pay TXN + due view -----------------------------------------
+
+test('pay and due routes answer 401 without a session', async () => {
+  const cases = [
+    () => request(app).post('/api/supplier-debts/00000000-0000-0000-0000-000000000000/pay').send({}),
+    () => request(app).get('/api/supplier-debts/due'),
+  ];
+  for (const make of cases) {
+    const res = await make();
+    assert.equal(res.status, 401);
+    assert.deepEqual(res.body, { error: 'Unauthorized' });
+  }
+});
+
+test('POST /api/supplier-debts/:id/pay validates amount and id shape', async () => {
+  const uuid = '00000000-0000-0000-0000-000000000000';
+
+  const nonUuid = await AUTHED.post('/api/supplier-debts/not-a-uuid/pay').send({
+    amount: 10,
+  });
+  assert.equal(nonUuid.status, 404);
+
+  const missing = await AUTHED.post(`/api/supplier-debts/${uuid}/pay`).send({});
+  assert.equal(missing.status, 400);
+  assert.equal(missing.body.error, 'amount must be a positive number');
+
+  const zero = await AUTHED.post(`/api/supplier-debts/${uuid}/pay`).send({
+    amount: 0,
+  });
+  assert.equal(zero.status, 400);
+
+  const negative = await AUTHED.post(`/api/supplier-debts/${uuid}/pay`).send({
+    amount: -5,
+  });
+  assert.equal(negative.status, 400);
+
+  const stringAmount = await AUTHED.post(`/api/supplier-debts/${uuid}/pay`).send({
+    amount: '10',
+  });
+  assert.equal(stringAmount.status, 400);
+});
+
+test('GET /api/supplier-debts/due validates horizonDays', async () => {
+  const cases = ['abc', '-1', '2.5'];
+  for (const horizonDays of cases) {
+    const res = await AUTHED.get(`/api/supplier-debts/due?horizonDays=${horizonDays}`);
+    assert.equal(res.status, 400);
+    assert.equal(res.body.error, 'horizonDays must be a non-negative integer');
+  }
+});
+
+test(
+  'POST /api/supplier-debts/:id/pay reduces balance, rejects overpayment, closes at 0',
+  { skip: SKIP },
+  async () => {
+    const pool = dbContext();
+    await runMigration(pool);
+    const api = testApp(pool);
+
+    const supplier = await insertSupplier(pool, unique('Pagar'));
+    const debtId = await insertDebt(pool, {
+      supplierId: supplier.id,
+      amount: 100,
+      balance: 100,
+      dueDate: '2026-08-10',
+    });
+
+    // Partial payment: balance drops, debt stays open.
+    const partial = await request(api)
+      .post(`/api/supplier-debts/${debtId}/pay`)
+      .set('Cookie', authCookie)
+      .send({ amount: 30 });
+    assert.equal(partial.status, 200);
+    assert.equal(partial.body.debt.balance, 70);
+    assert.equal(partial.body.debt.status, 'open');
+
+    const payments = await pool.query(
+      'SELECT COUNT(*)::int AS n FROM supplier_payments WHERE debt_id = $1',
+      [debtId]
+    );
+    assert.equal(payments.rows[0].n, 1, 'payment row recorded');
+
+    // Overpayment (80 > 70): 400, balance and rows untouched.
+    const over = await request(api)
+      .post(`/api/supplier-debts/${debtId}/pay`)
+      .set('Cookie', authCookie)
+      .send({ amount: 80 });
+    assert.equal(over.status, 400);
+    assert.equal(over.body.error, 'Payment exceeds the remaining balance of the supplier debt');
+
+    const afterOver = await pool.query(
+      'SELECT status, balance FROM supplier_debts WHERE id = $1',
+      [debtId]
+    );
+    assert.equal(Number(afterOver.rows[0].balance), 70, 'balance unchanged after rejection');
+    assert.equal(afterOver.rows[0].status, 'open');
+    const paymentsAfter = await pool.query(
+      'SELECT COUNT(*)::int AS n FROM supplier_payments WHERE debt_id = $1',
+      [debtId]
+    );
+    assert.equal(paymentsAfter.rows[0].n, 1, 'no payment row persisted after rejection');
+
+    // Exact remainder closes the debt.
+    const exact = await request(api)
+      .post(`/api/supplier-debts/${debtId}/pay`)
+      .set('Cookie', authCookie)
+      .send({ amount: 70 });
+    assert.equal(exact.status, 200);
+    assert.equal(exact.body.debt.balance, 0);
+    assert.equal(exact.body.debt.status, 'closed');
+
+    // Payment on a closed debt is a conflict.
+    const after = await request(api)
+      .post(`/api/supplier-debts/${debtId}/pay`)
+      .set('Cookie', authCookie)
+      .send({ amount: 5 });
+    assert.equal(after.status, 409);
+    assert.equal(after.body.error, 'Only open supplier debts can receive payments');
+  }
+);
+
+test(
+  'GET /api/supplier-debts/due filters by horizon and flags overdue/soon-due',
+  { skip: SKIP },
+  async () => {
+    const pool = dbContext();
+    await runMigration(pool);
+    const api = testApp(pool);
+
+    const supplier = await insertSupplier(pool, unique('Vencimientos'));
+    const overdueId = await insertDebt(pool, {
+      supplierId: supplier.id,
+      amount: 40,
+      balance: 40,
+      dueDate: '2020-01-01', // overdue for any real "today"
+    });
+    const soonId = await insertDebt(pool, {
+      supplierId: supplier.id,
+      amount: 60,
+      balance: 60,
+      dueDate: '2099-01-05', // far future, inside a 30-day horizon
+    });
+    // Far beyond the horizon: excluded.
+    await insertDebt(pool, {
+      supplierId: supplier.id,
+      amount: 25,
+      balance: 25,
+      dueDate: '2199-01-01',
+    });
+    // Closed debt: excluded even when due inside the horizon.
+    await insertDebt(pool, {
+      supplierId: supplier.id,
+      amount: 15,
+      balance: 0,
+      dueDate: '2099-01-03',
+      status: 'closed',
+    });
+    // Fully paid open debt (balance 0): excluded.
+    await insertDebt(pool, {
+      supplierId: supplier.id,
+      amount: 10,
+      balance: 0,
+      dueDate: '2099-01-04',
+    });
+
+    const res = await request(api)
+      .get('/api/supplier-debts/due?horizonDays=30')
+      .set('Cookie', authCookie);
+    assert.equal(res.status, 200);
+    assert.equal(res.body.debts.length, 2, 'only open, unpaid, in-horizon debts');
+    assert.deepEqual(
+      res.body.debts.map((d) => d.id).sort(),
+      [overdueId, soonId].sort()
+    );
+
+    const byId = Object.fromEntries(res.body.debts.map((d) => [d.id, d]));
+    assert.equal(byId[overdueId].overdue, true, 'past-due debt flagged overdue');
+    assert.equal(byId[overdueId].soon_due, false);
+    assert.equal(byId[soonId].overdue, false);
+    assert.equal(byId[soonId].soon_due, true, 'in-horizon future debt flagged soon-due');
+
+    // Ordered by due date ascending: overdue (2020) first.
+    assert.equal(res.body.debts[0].id, overdueId);
+  }
+);
