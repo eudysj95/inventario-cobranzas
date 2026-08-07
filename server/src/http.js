@@ -28,12 +28,16 @@ export function isUuid(value) {
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
- * True for a strict YYYY-MM-DD calendar date. ISO parsing rejects
- * out-of-range days/months (e.g. 2026-02-30, 2026-13-01) as Invalid Date,
- * so the shape regex plus a parse check is sufficient.
+ * True for a strict YYYY-MM-DD calendar date. The shape regex plus a parse
+ * check is NOT sufficient on its own: V8's ISO parser rolls over out-of-range
+ * days (2026-02-30 parses as March 1), which would pass the parse check but
+ * fail later when Postgres casts the value to DATE. A round-trip comparison
+ * (parsed date re-serialized must equal the input) rejects those. Months are
+ * already rejected by the parser (2026-13-01 -> Invalid Date).
  */
 export function isDateString(value) {
   if (typeof value !== 'string' || !DATE_RE.test(value)) return false;
   const parsed = new Date(`${value}T00:00:00Z`);
-  return !Number.isNaN(parsed.getTime());
+  if (Number.isNaN(parsed.getTime())) return false;
+  return parsed.toISOString().slice(0, 10) === value;
 }
