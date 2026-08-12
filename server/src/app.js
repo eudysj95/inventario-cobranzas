@@ -1,6 +1,7 @@
 import express from 'express';
 import healthRouter from './routes/health.js';
 import authRouter from './routes/auth.js';
+import configRouter from './routes/config.js';
 import productsRouter from './routes/products.js';
 import customersRouter from './routes/customers.js';
 import apartadosRouter from './routes/apartados.js';
@@ -28,6 +29,11 @@ export function createApp({ pool } = {}) {
 
   // Session management: login/logout/me.
   app.use('/api/auth', authRouter(pool));
+
+  // Public instance branding (no auth, no DB): business name, currency and
+  // optional WhatsApp contact — the SPA renders these instead of hardcoding
+  // them (design: GET /api/config, Option B multi-instance).
+  app.use('/api/config', configRouter());
 
   // Core catalog routes (auth-guarded inside the routers).
   app.use('/api/products', productsRouter(pool));
