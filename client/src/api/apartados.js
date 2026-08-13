@@ -15,6 +15,7 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from './client.js';
+import { COLLECTIONS_KEY } from './collections.js';
 
 export const APARTADOS_KEY = ['apartados'];
 
@@ -105,17 +106,17 @@ export function useApartadoMutations() {
   return {
     async create(input) {
       const apartado = await createApartado(input);
-      await invalidate([APARTADOS_KEY, ['products'], ['customers']]);
+      await invalidate([APARTADOS_KEY, ['products'], ['customers'], COLLECTIONS_KEY]);
       return apartado;
     },
     async cancel(id) {
       const apartado = await cancelApartado(id);
-      await invalidate([APARTADOS_KEY, ['products'], ['customers']]);
+      await invalidate([APARTADOS_KEY, ['products'], ['customers'], COLLECTIONS_KEY]);
       return apartado;
     },
     async pay(id, body) {
       const apartado = await payApartado(id, body);
-      await invalidate([APARTADOS_KEY, ['customers']]);
+      await invalidate([APARTADOS_KEY, ['customers'], COLLECTIONS_KEY]);
       return apartado;
     },
   };

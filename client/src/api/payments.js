@@ -12,6 +12,7 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from './client.js';
+import { COLLECTIONS_KEY } from './collections.js';
 
 export const PAYMENTS_KEY = ['payments'];
 
@@ -60,6 +61,9 @@ export function usePaymentMutations() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: PAYMENTS_KEY }),
         queryClient.invalidateQueries({ queryKey: ['customers'] }),
+        // A payment changes open balances, so the collections due view
+        // (remaining amounts + overdue flags) must refetch too.
+        queryClient.invalidateQueries({ queryKey: COLLECTIONS_KEY }),
       ]);
       return result;
     },

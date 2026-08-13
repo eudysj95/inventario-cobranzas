@@ -12,6 +12,7 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from './client.js';
+import { COLLECTIONS_KEY } from './collections.js';
 
 export const CREDIT_SALES_KEY = ['credit-sales'];
 
@@ -70,6 +71,8 @@ export function useCreditSaleMutations() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['products'] }),
         queryClient.invalidateQueries({ queryKey: ['customers'] }),
+        // New open debts may enter the collections due view.
+        queryClient.invalidateQueries({ queryKey: COLLECTIONS_KEY }),
       ]);
       return sale;
     },
