@@ -46,10 +46,12 @@ export default function SuppliersPage() {
   const [bannerError, setBannerError] = useState(null);
   const [busy, setBusy] = useState(false);
 
-  const { data: suppliers = [], isPending: suppliersPending } = useSuppliers(search);
+  const { data: suppliers = [], isPending: suppliersPending, isError: suppliersError } =
+    useSuppliers(search);
   const { data: debts = [], isPending: debtsPending, isError: debtsError } =
     useSupplierDebts(status);
-  const { data: due = [], isPending: duePending } = useSupplierDebtsDue(horizonDays);
+  const { data: due = [], isPending: duePending, isError: dueError } =
+    useSupplierDebtsDue(horizonDays);
 
   async function handleCreate(body) {
     setBannerError(null);
@@ -111,6 +113,8 @@ export default function SuppliersPage() {
 
       {suppliersPending ? (
         <p>Cargando proveedores…</p>
+      ) : suppliersError ? (
+        <p role="alert">No se pudieron cargar los proveedores.</p>
       ) : suppliers.length === 0 ? (
         <p>Sin proveedores registrados.</p>
       ) : (
@@ -181,6 +185,8 @@ export default function SuppliersPage() {
       </div>
       {duePending ? (
         <p>Cargando vencimientos…</p>
+      ) : dueError ? (
+        <p role="alert">No se pudieron cargar los vencimientos.</p>
       ) : due.length === 0 ? (
         <p>No hay vencimientos en el horizonte.</p>
       ) : (
