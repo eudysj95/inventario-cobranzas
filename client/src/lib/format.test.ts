@@ -36,4 +36,21 @@ describe('formatDate', () => {
   it('accepts Date instances', () => {
     expect(formatDate(new Date(2026, 7, 11), AR)).toBe('11/08/2026');
   });
+
+  it('parses the server ISO-timestamp wire form for DATE columns', () => {
+    // pg DATE columns serialize via Date#toISOString ("2026-08-11T00:00:00.000Z");
+    // only the leading date part matters, the time is ignored.
+    expect(formatDate('2026-08-11T00:00:00.000Z', AR)).toBe('11/08/2026');
+    expect(formatDate('2026-08-11T00:00:00.000Z', US)).toBe('08/11/2026');
+    expect(formatDate('2026-08-11T03:00:00.000Z', AR)).toBe('11/08/2026');
+  });
+
+  it('formats null, undefined and unparseable values as empty strings', () => {
+    expect(formatDate(null, AR)).toBe('');
+    expect(formatDate(undefined, AR)).toBe('');
+    expect(formatDate('', AR)).toBe('');
+    expect(formatDate('not-a-date', AR)).toBe('');
+    expect(formatDate('2026-13-40', AR)).toBe('');
+    expect(formatDate(new Date(Number.NaN), AR)).toBe('');
+  });
 });
