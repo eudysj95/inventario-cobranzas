@@ -23,6 +23,7 @@ import { useAuthActions } from './api/auth.js';
 import RequireAuth from './auth/RequireAuth.jsx';
 import LoginPage from './features/auth/LoginPage.jsx';
 import InventoryPage from './features/inventory/InventoryPage.jsx';
+import ApartadosPage from './features/apartados/ApartadosPage.jsx';
 
 function AppShell() {
   const { data, isError } = useConfig();
@@ -50,6 +51,7 @@ function AppShell() {
         )}
         <nav>
           <NavLink to="/inventory">Inventario</NavLink>
+          <NavLink to="/apartados">Apartados</NavLink>
         </nav>
         {whatsappHref && (
           <a href={whatsappHref} title="Contacto por WhatsApp">
@@ -80,6 +82,7 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route index element={<Navigate to="/inventory" replace />} />
           <Route path="inventory" element={<InventoryPage />} />
+          <Route path="apartados" element={<ApartadosPage />} />
           <Route path="*" element={<Navigate to="/inventory" replace />} />
         </Route>
       </Route>
