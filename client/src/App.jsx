@@ -58,7 +58,7 @@ function AppShell() {
           <NavLink to="/apartados">Apartados</NavLink>
           <NavLink to="/credit-sales">Venta a crédito</NavLink>
           <NavLink to="/cobros">Cobranzas</NavLink>
-          <NavLink to="/payments">Cobros</NavLink>
+          <NavLink to="/payments">Pagos</NavLink>
           <NavLink to="/proveedores">Proveedores</NavLink>
         </nav>
         {whatsappHref && (

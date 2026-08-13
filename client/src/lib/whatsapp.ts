@@ -12,8 +12,9 @@
 //       empty so the UI renders the "phone required" indicator instead of a
 //       link (spec: "Links MUST be generated only when the customer's phone
 //       is present").
-//   hasPhone(phone) — the pure predicate the page uses to branch between the
-//       WhatsApp link and the requirement text.
+//   hasPhone(phone) — true when the customer has a usable (non-blank) phone.
+//       Standalone predicate, unit-tested here; the collection page branches
+//       on the buildWaLink result (link ? link : PHONE_REQUIRED_TEXT) instead.
 //
 // IMPORTANT (design): these links ALWAYS use the CUSTOMER's phone from the
 // record. The instance WhatsApp number from config (whatsappNumber) is
