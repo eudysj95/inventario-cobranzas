@@ -21,8 +21,10 @@ function validate(values) {
     if (!Number.isInteger(Number(line.units)) || Number(line.units) <= 0) {
       return `La línea ${i + 1} debe tener unidades enteras mayores a cero.`;
     }
-    if (line.price !== '' && (!Number.isFinite(Number(line.price)) || Number(line.price) < 0)) {
-      return `La línea ${i + 1} debe tener un precio mayor o igual a cero (o vacío para usar el precio de catálogo).`;
+    if (line.price !== '' && (!Number.isFinite(Number(line.price)) || Number(line.price) <= 0)) {
+      // Explicit price 0 must be rejected client-side: the server accepts
+      // price >= 0 but the DB CHECK (amount > 0) then 500s on a zero line.
+      return `La línea ${i + 1} debe tener un precio mayor a cero (o vacío para usar el precio de catálogo).`;
     }
   }
   return null;
@@ -139,7 +141,7 @@ export default function CreditSaleForm({ onSubmit, onCancel }) {
                 <input
                   id={`credit-line-${index}-price`}
                   type="number"
-                  min="0"
+                  min="0.01"
                   step="0.01"
                   placeholder="Catálogo"
                   value={line.price}
