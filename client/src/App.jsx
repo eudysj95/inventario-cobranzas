@@ -27,6 +27,7 @@ import ApartadosPage from './features/apartados/ApartadosPage.jsx';
 import CreditSalesPage from './features/credit/CreditSalesPage.jsx';
 import PaymentsPanel from './features/credit/PaymentsPanel.jsx';
 import CollectionsPage from './features/collections/CollectionsPage.jsx';
+import SuppliersPage from './features/suppliers/SuppliersPage.jsx';
 
 function AppShell() {
   const { data, isError } = useConfig();
@@ -58,6 +59,7 @@ function AppShell() {
           <NavLink to="/credit-sales">Venta a crédito</NavLink>
           <NavLink to="/cobros">Cobranzas</NavLink>
           <NavLink to="/payments">Cobros</NavLink>
+          <NavLink to="/proveedores">Proveedores</NavLink>
         </nav>
         {whatsappHref && (
           <a href={whatsappHref} title="Contacto por WhatsApp">
@@ -92,6 +94,7 @@ export default function App() {
           <Route path="credit-sales" element={<CreditSalesPage />} />
           <Route path="cobros" element={<CollectionsPage />} />
           <Route path="payments" element={<PaymentsPanel />} />
+          <Route path="proveedores" element={<SuppliersPage />} />
           <Route path="*" element={<Navigate to="/inventory" replace />} />
         </Route>
       </Route>
