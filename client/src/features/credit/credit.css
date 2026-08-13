@@ -1,0 +1,122 @@
+/* Credit sales + payments panel styles (task 6.4). Co-located with the feature;
+   reuses the shared form-overlay/product-form/form-error visual language and
+   the apartado-table styles imported by the feature pages. */
+
+.credit-form .credit-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+
+.credit-form .credit-lines h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.credit-line {
+  display: grid;
+  grid-template-columns: 1fr 5rem 7rem auto;
+  gap: 0.5rem;
+  align-items: end;
+}
+
+.credit-line label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-weight: 500;
+}
+
+.credit-line input,
+.credit-line select {
+  font: inherit;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid #bdbdbd;
+  border-radius: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.credit-line-remove {
+  align-self: end;
+}
+
+/* --- sale detail --- */
+
+.sale-detail {
+  margin: 1rem 0;
+}
+
+.sale-detail h3 {
+  margin-bottom: 0.25rem;
+}
+
+/* --- payments panel --- */
+
+.payments-panel .payments-pick label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-weight: 500;
+  max-width: 24rem;
+}
+
+.payments-panel .payments-pick select {
+  font: inherit;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid #bdbdbd;
+  border-radius: 4px;
+}
+
+.payments-body {
+  margin-top: 1rem;
+  max-width: 48rem;
+}
+
+.payments-body .payments-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 24rem;
+  margin-top: 1rem;
+}
+
+.payments-body .payments-form h3 {
+  margin: 0;
+}
+
+.payments-body .payments-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-weight: 500;
+}
+
+.payments-body .payments-form input {
+  font: inherit;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid #bdbdbd;
+  border-radius: 4px;
+}
+
+.allocations-result {
+  margin-top: 1rem;
+  border: 1px solid #c8e6c9;
+  background: #e8f5e9;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  max-width: 32rem;
+}
+
+.allocations-result h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+
+.allocations-result ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1.25rem;
+}
