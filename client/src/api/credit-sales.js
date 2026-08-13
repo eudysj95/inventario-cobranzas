@@ -13,6 +13,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from './client.js';
 import { COLLECTIONS_KEY } from './collections.js';
+import { CUSTOMERS_KEY } from './customers.js';
+import { PRODUCTS_KEY } from './products.js';
 
 export const CREDIT_SALES_KEY = ['credit-sales'];
 
@@ -69,8 +71,8 @@ export function useCreditSaleMutations() {
     async create(input) {
       const sale = await createCreditSale(input);
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['products'] }),
-        queryClient.invalidateQueries({ queryKey: ['customers'] }),
+        queryClient.invalidateQueries({ queryKey: PRODUCTS_KEY }),
+        queryClient.invalidateQueries({ queryKey: CUSTOMERS_KEY }),
         // New open debts may enter the collections due view.
         queryClient.invalidateQueries({ queryKey: COLLECTIONS_KEY }),
       ]);

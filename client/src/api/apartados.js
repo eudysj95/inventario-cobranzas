@@ -16,6 +16,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from './client.js';
 import { COLLECTIONS_KEY } from './collections.js';
+import { CUSTOMERS_KEY } from './customers.js';
+import { PRODUCTS_KEY } from './products.js';
 
 export const APARTADOS_KEY = ['apartados'];
 
@@ -93,8 +95,10 @@ export function useApartados(filters) {
 }
 
 /**
- * Mutation actions that invalidate the apartado list; create/cancel also
- * invalidate products (stock moved) and customers (open balance changed).
+ * Mutation actions that invalidate the apartado list; create/cancel/pay also
+ * invalidate products (stock moves: create reserves units, cancel restores
+ * them, full pay flips reserved units to sold in the product_states view) and
+ * customers (open balance changed).
  */
 export function useApartadoMutations() {
   const queryClient = useQueryClient();
@@ -106,17 +110,17 @@ export function useApartadoMutations() {
   return {
     async create(input) {
       const apartado = await createApartado(input);
-      await invalidate([APARTADOS_KEY, ['products'], ['customers'], COLLECTIONS_KEY]);
+      await invalidate([APARTADOS_KEY, PRODUCTS_KEY, CUSTOMERS_KEY, COLLECTIONS_KEY]);
       return apartado;
     },
     async cancel(id) {
       const apartado = await cancelApartado(id);
-      await invalidate([APARTADOS_KEY, ['products'], ['customers'], COLLECTIONS_KEY]);
+      await invalidate([APARTADOS_KEY, PRODUCTS_KEY, CUSTOMERS_KEY, COLLECTIONS_KEY]);
       return apartado;
     },
     async pay(id, body) {
       const apartado = await payApartado(id, body);
-      await invalidate([APARTADOS_KEY, ['customers'], COLLECTIONS_KEY]);
+      await invalidate([APARTADOS_KEY, PRODUCTS_KEY, CUSTOMERS_KEY, COLLECTIONS_KEY]);
       return apartado;
     },
   };
