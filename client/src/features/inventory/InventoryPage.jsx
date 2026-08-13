@@ -2,7 +2,7 @@
 // with search + state filters; every mutation invalidates the cache so the
 // table refetches. Create/edit go through ProductForm, delete asks for
 // confirmation and surfaces the server's 409 guard messages. UI copy in
-// English (batch language contract).
+// neutral Spanish (design: "UI labels in neutral Spanish").
 
 import { useState } from 'react';
 import { DEFAULT_CONFIG, useConfig } from '../../api/config.js';
@@ -12,11 +12,11 @@ import ProductForm from './ProductForm.jsx';
 import './inventory.css';
 
 const PRODUCT_STATES = [
-  ['', 'All states'],
-  ['available', 'Available'],
+  ['', 'Todos los estados'],
+  ['available', 'Disponible'],
   ['apartado', 'Apartado'],
-  ['credit', 'Credit'],
-  ['sold', 'Sold'],
+  ['credit', 'Crédito'],
+  ['sold', 'Vendido'],
 ];
 
 export default function InventoryPage() {
@@ -68,13 +68,13 @@ export default function InventoryPage() {
   }
 
   async function handleDelete(product) {
-    if (!window.confirm(`Delete "${product.name}"? This cannot be undone.`)) return;
+    if (!window.confirm(`¿Eliminar "${product.name}"? Esta acción no se puede deshacer.`)) return;
     setBannerError(null);
     setBusy(true);
     try {
       await remove(product.id);
     } catch (err) {
-      setBannerError(err instanceof Error ? err.message : 'Unexpected error.');
+      setBannerError(err instanceof Error ? err.message : 'Ocurrió un error inesperado.');
     } finally {
       setBusy(false);
     }
@@ -83,21 +83,21 @@ export default function InventoryPage() {
   return (
     <section className="inventory-page">
       <header className="inventory-header">
-        <h2>Inventory</h2>
+        <h2>Inventario</h2>
         <button type="button" onClick={openCreate}>
-          New product
+          Nuevo producto
         </button>
       </header>
 
       <form className="inventory-filters" onSubmit={applySearch}>
         <input
           type="search"
-          placeholder="Search products…"
+          placeholder="Buscar productos…"
           value={searchInput}
           onChange={(event) => setSearchInput(event.target.value)}
         />
-        <button type="submit">Search</button>
-        <select value={filters.state} onChange={applyState} aria-label="Filter by state">
+        <button type="submit">Buscar</button>
+        <select value={filters.state} onChange={applyState} aria-label="Filtrar por estado">
           {PRODUCT_STATES.map(([value, label]) => (
             <option key={value} value={value}>
               {label}
@@ -113,11 +113,11 @@ export default function InventoryPage() {
       )}
 
       {isPending ? (
-        <p>Loading products…</p>
+        <p>Cargando productos…</p>
       ) : isError ? (
-        <p role="alert">Could not load products.</p>
+        <p role="alert">No se pudieron cargar los productos.</p>
       ) : products.length === 0 ? (
-        <p>No products match the current filters.</p>
+        <p>No hay productos que coincidan con los filtros.</p>
       ) : (
         <InventoryTable
           products={products}
@@ -127,7 +127,7 @@ export default function InventoryPage() {
         />
       )}
 
-      {busy && <p aria-live="polite">Working…</p>}
+      {busy && <p aria-live="polite">Procesando…</p>}
 
       {form && (
         <ProductForm product={form.product ?? null} onSubmit={handleSubmit} onCancel={closeForm} />

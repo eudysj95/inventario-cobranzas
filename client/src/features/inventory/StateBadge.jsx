@@ -11,7 +11,7 @@ export default function StateBadge({ product }) {
   const count = Number(product[`${state}_units`]) || 0;
 
   return (
-    <span className={`chip chip--${meta.color}`} title={`${meta.label}: ${count} units`}>
+    <span className={`chip chip--${meta.color}`} title={`${meta.label}: ${count} unidades`}>
       {meta.key} {count}
     </span>
   );

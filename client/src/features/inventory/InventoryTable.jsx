@@ -9,11 +9,11 @@ export default function InventoryTable({ products, config, onEdit, onDelete }) {
     <table className="inventory-table">
       <thead>
         <tr>
-          <th>Product</th>
-          <th>Units</th>
-          <th>Price</th>
-          <th>Last update</th>
-          <th>Actions</th>
+          <th>Producto</th>
+          <th>Unidades</th>
+          <th>Precio</th>
+          <th>Última actualización</th>
+          <th>Acciones</th>
         </tr>
       </thead>
       <tbody>

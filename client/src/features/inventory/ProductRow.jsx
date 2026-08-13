@@ -22,12 +22,12 @@ export default function ProductRow({ product, config, onEdit, onDelete }) {
             <span
               key={chip.state}
               className={`chip chip--${chip.color}`}
-              title={`${chip.label}: ${chip.count} units`}
+              title={`${chip.label}: ${chip.count} unidades`}
             >
               {chip.key} {chip.count}
             </span>
           ))}
-          <span className="chips-total" title={`${product.total_units} units in total`}>
+          <span className="chips-total" title={`${product.total_units} unidades en total`}>
             Total {product.total_units}
           </span>
         </span>
@@ -36,10 +36,10 @@ export default function ProductRow({ product, config, onEdit, onDelete }) {
       <td>{formatDate(new Date(product.updated_at), config)}</td>
       <td>
         <button type="button" onClick={() => onEdit(product)}>
-          Edit
+          Editar
         </button>{' '}
         <button type="button" onClick={() => onDelete(product)}>
-          Delete
+          Eliminar
         </button>
       </td>
     </tr>

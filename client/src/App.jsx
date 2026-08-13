@@ -14,7 +14,7 @@
 // check via GET /api/auth/me). The protected area is an app shell (header +
 // nav + logout) whose pages are added by slices 6.3-6.5; /inventory is the
 // current page (task 6.3), the index and catch-all redirect to it. UI copy in
-// English (batch language contract).
+// neutral Spanish (design: "UI labels in neutral Spanish").
 
 import { useEffect } from 'react';
 import { NavLink, Navigate, Outlet, Route, Routes, useNavigate } from 'react-router-dom';
@@ -46,18 +46,18 @@ function AppShell() {
       <header>
         <h1>{config.businessName}</h1>
         {isError && (
-          <p role="alert">Could not load business configuration; showing defaults.</p>
+          <p role="alert">No se pudo cargar la configuración del negocio; se muestran valores por defecto.</p>
         )}
         <nav>
-          <NavLink to="/inventory">Inventory</NavLink>
+          <NavLink to="/inventory">Inventario</NavLink>
         </nav>
         {whatsappHref && (
-          <a href={whatsappHref} title="Contact on WhatsApp">
+          <a href={whatsappHref} title="Contacto por WhatsApp">
             {config.whatsappNumber}
           </a>
         )}
         <button type="button" onClick={handleLogout}>
-          Log out
+          Cerrar sesión
         </button>
       </header>
       <Outlet />

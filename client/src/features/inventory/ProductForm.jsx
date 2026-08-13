@@ -38,12 +38,12 @@ function buildEditPatch(product, values) {
 }
 
 function validate(values) {
-  if (values.name.trim() === '') return 'Product name is required.';
+  if (values.name.trim() === '') return 'El nombre del producto es obligatorio.';
   if (!Number.isFinite(values.price) || values.price < 0) {
-    return 'Price must be a non-negative number.';
+    return 'El precio debe ser un número mayor o igual a cero.';
   }
   if (!Number.isInteger(values.quantity) || values.quantity < 0) {
-    return 'Quantity must be a whole number of 0 or more.';
+    return 'La cantidad debe ser un número entero mayor o igual a cero.';
   }
   return null;
 }
@@ -86,19 +86,19 @@ export default function ProductForm({ product, onSubmit, onCancel }) {
       await onSubmit(payload);
     } catch (err) {
       // Includes server guard messages (ApiError) and validation failures.
-      setError(err instanceof Error ? err.message : 'Unexpected error.');
+      setError(err instanceof Error ? err.message : 'Ocurrió un error inesperado.');
       setSubmitting(false);
     }
   }
 
   return (
-    <div className="form-overlay" role="dialog" aria-modal="true" aria-label={isEdit ? 'Edit product' : 'New product'}>
+    <div className="form-overlay" role="dialog" aria-modal="true" aria-label={isEdit ? 'Editar producto' : 'Nuevo producto'}>
       <form className="product-form" onSubmit={handleSubmit}>
-        <h2>{isEdit ? `Edit product: ${product.name}` : 'New product'}</h2>
+        <h2>{isEdit ? `Editar producto: ${product.name}` : 'Nuevo producto'}</h2>
 
         {isEdit && (
           <p className="form-current-state">
-            Current state: <StateBadge product={product} />
+            Estado actual: <StateBadge product={product} />
           </p>
         )}
 
@@ -109,7 +109,7 @@ export default function ProductForm({ product, onSubmit, onCancel }) {
         )}
 
         <label htmlFor="product-name">
-          Name
+          Nombre
           <input
             id="product-name"
             value={name}
@@ -121,7 +121,7 @@ export default function ProductForm({ product, onSubmit, onCancel }) {
         </label>
 
         <label htmlFor="product-description">
-          Description
+          Descripción
           <textarea
             id="product-description"
             value={description}
@@ -132,7 +132,7 @@ export default function ProductForm({ product, onSubmit, onCancel }) {
         </label>
 
         <label htmlFor="product-price">
-          Price
+          Precio
           <input
             id="product-price"
             type="number"
@@ -145,7 +145,7 @@ export default function ProductForm({ product, onSubmit, onCancel }) {
         </label>
 
         <label htmlFor="product-quantity">
-          {isEdit ? 'Stock (target quantity)' : 'Initial stock'}
+          {isEdit ? 'Stock (cantidad objetivo)' : 'Stock inicial'}
           <input
             id="product-quantity"
             type="number"
@@ -159,18 +159,17 @@ export default function ProductForm({ product, onSubmit, onCancel }) {
 
         {isEdit && (
           <p className="form-hint">
-            Stock is an adjustment: enter a value above the current stock (
-            {product.quantity}) to restock, or below to remove units. Stock can
-            never go below 0.
+            El stock es un ajuste: ingrese un valor mayor al stock actual ({product.quantity}) para
+            reponer unidades, o menor para quitarlas. El stock nunca puede ser menor a cero.
           </p>
         )}
 
         <div className="form-actions">
           <button type="submit" disabled={submitting}>
-            {submitting ? 'Saving…' : 'Save'}
+            {submitting ? 'Guardando…' : 'Guardar'}
           </button>
           <button type="button" onClick={onCancel} disabled={submitting}>
-            Cancel
+            Cancelar
           </button>
         </div>
       </form>

@@ -9,9 +9,9 @@
 
 export const STATE_CHIPS = [
   { key: 'A', label: 'Apartado', state: 'apartado', color: 'red' },
-  { key: 'C', label: 'Credit', state: 'credit', color: 'green' },
-  { key: 'Disp', label: 'Available', state: 'available', color: 'blue' },
-  { key: 'S', label: 'Sold', state: 'sold', color: 'gray' },
+  { key: 'C', label: 'Crédito', state: 'credit', color: 'green' },
+  { key: 'Disp', label: 'Disponible', state: 'available', color: 'blue' },
+  { key: 'S', label: 'Vendido', state: 'sold', color: 'gray' },
 ];
 
 // View column that holds the count for each chip state.
