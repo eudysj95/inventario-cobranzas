@@ -1,3 +1,6 @@
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import express from 'express';
 import healthRouter from './routes/health.js';
 import authRouter from './routes/auth.js';
@@ -53,6 +56,25 @@ export function createApp({ pool } = {}) {
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: 'Not found' });
   });
+
+  // Production single-service model: one Render service runs the API and
+  // serves the built SPA from the same origin, so no CORS is needed. The API
+  // routers and the /api 404 above stay mounted first so /api/* always gets
+  // JSON; everything else falls through to the static build below.
+  const clientDistPath = fileURLToPath(new URL('../../client/dist', import.meta.url));
+  if (existsSync(clientDistPath)) {
+    app.use(express.static(clientDistPath));
+
+    // SPA fallback: any remaining GET outside /api serves index.html so
+    // client-side routes (/inventory, ...) work on reload. Always after
+    // express.static so real assets are never shadowed.
+    app.use((req, res, next) => {
+      if (req.method !== 'GET' || req.path.startsWith('/api')) return next();
+      res.sendFile(path.join(clientDistPath, 'index.html'));
+    });
+  } else {
+    console.warn('[api] client/dist not found — SPA not served (run npm run build --workspace client)');
+  }
 
   return app;
 }
