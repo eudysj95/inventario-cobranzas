@@ -14,6 +14,11 @@ import collectionsRouter from './routes/collections.js';
 import suppliersRouter from './routes/suppliers.js';
 import supplierDebtsRouter from './routes/supplier-debts.js';
 
+// Extensions that identify a file request, not a client-side route. The SPA
+// fallback must not answer these with index.html: a missing/stale asset
+// (e.g. a rebuilt hashed file, or favicon.ico) should 404 instead.
+const ASSET_EXT_RE = /\.(?:js|mjs|css|map|png|jpe?g|svg|gif|ico|webp|woff2?|ttf|eot|txt|json|xml)$/i;
+
 /**
  * Build the Express app. The pool is injected so tests can supply their own
  * (e.g. one pointed at a test database) and /health can probe it.
@@ -70,6 +75,15 @@ export function createApp({ pool } = {}) {
     // express.static so real assets are never shadowed.
     app.use((req, res, next) => {
       if (req.method !== 'GET' || req.path.startsWith('/api')) return next();
+      // Missing/stale assets (renamed hashed files, typos like favicon.ico)
+      // must 404, not return the HTML shell — a 200 text/html response makes
+      // the browser execute HTML as a JS module and hides broken builds
+      // from monitoring (see review WARNING on the SPA fallback). Respond
+      // explicitly (not next()) so the 404 is non-HTML: Express's default
+      // finalhandler would answer text/html.
+      if (ASSET_EXT_RE.test(req.path)) {
+        return res.status(404).json({ error: 'Not found' });
+      }
       res.sendFile(path.join(clientDistPath, 'index.html'));
     });
   } else {
