@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requireAuth } from '../auth.js';
 import { badRequest, isUuid, notFound } from '../http.js';
 import { withTransaction } from '../services/txn.js';
+import { allocateFifo } from '../lib/fifo.js';
 
 /**
  * Payments routes (task 4.4):
@@ -73,39 +74,39 @@ export default function paymentsRouter(pool) {
 
       // FIFO: oldest debt first; a payment MAY span multiple debts, closing
       // older ones before touching newer ones (spec scenario: 60 on 50+40).
-      const allocations = [];
-      let remaining = amountCents;
-      for (const debt of debts) {
-        if (remaining <= 0) break;
-        const balanceCents = toCents(debt.balance);
-        const allocCents = Math.min(balanceCents, remaining);
-        if (allocCents <= 0) continue;
+      const { allocations, updates } = allocateFifo(debts, amountCents);
+
+      const responseAllocations = [];
+      for (let i = 0; i < allocations.length; i++) {
+        const alloc = allocations[i];
+        const update = updates[i];
 
         await client.query(
           'INSERT INTO payment_allocations (payment_id, debt_id, amount) VALUES ($1, $2, $3)',
-          [paymentId, debt.id, toMoney(allocCents)]
+          [paymentId, alloc.debt_id, toMoney(alloc.amountCents)]
         );
-        allocations.push({ debt_id: debt.id, amount: Number(toMoney(allocCents)) });
+        responseAllocations.push({
+          debt_id: alloc.debt_id,
+          amount: Number(toMoney(alloc.amountCents)),
+        });
 
-        const newBalanceCents = balanceCents - allocCents;
-        if (newBalanceCents === 0) {
+        if (update.newBalanceCents === 0) {
           // Debt lifecycle ends at balance 0: closed and out of future views.
           await client.query(
             `UPDATE customer_debts
              SET balance = 0, status = 'closed', closed_at = now()
              WHERE id = $1`,
-            [debt.id]
+            [update.debt_id]
           );
         } else {
           await client.query(
             'UPDATE customer_debts SET balance = $2 WHERE id = $1',
-            [debt.id, toMoney(newBalanceCents)]
+            [update.debt_id, toMoney(update.newBalanceCents)]
           );
         }
-        remaining -= allocCents;
       }
 
-      return { status: 'ok', paymentId, allocations };
+      return { status: 'ok', paymentId, allocations: responseAllocations };
     });
 
     switch (result.status) {
