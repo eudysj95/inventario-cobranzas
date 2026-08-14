@@ -1,4 +1,4 @@
-// Application shell + routes (task 6.2).
+// Application shell + routes (tasks 6.2 + 6.3).
 //
 // Branding is config-driven: businessName, currency and the instance WhatsApp
 // number come from GET /api/config (public endpoint, client/src/api/config.js)
@@ -11,19 +11,25 @@
 // never this number.
 //
 // Routing: /login is public; everything else sits behind RequireAuth (session
-// check via GET /api/auth/me). The protected area is a placeholder home that
-// slices 6.3-6.5 will replace with the real pages.
+// check via GET /api/auth/me). The protected area is an app shell (header +
+// nav + logout) whose pages are added by slices 6.3-6.5; /inventory is the
+// current page (task 6.3), the index and catch-all redirect to it. UI copy in
+// neutral Spanish (design: "UI labels in neutral Spanish").
 
 import { useEffect } from 'react';
-import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { NavLink, Navigate, Outlet, Route, Routes, useNavigate } from 'react-router-dom';
 import { DEFAULT_CONFIG, useConfig } from './api/config.js';
 import { useAuthActions } from './api/auth.js';
 import RequireAuth from './auth/RequireAuth.jsx';
 import LoginPage from './features/auth/LoginPage.jsx';
+import InventoryPage from './features/inventory/InventoryPage.jsx';
+import ApartadosPage from './features/apartados/ApartadosPage.jsx';
+import CreditSalesPage from './features/credit/CreditSalesPage.jsx';
+import PaymentsPanel from './features/credit/PaymentsPanel.jsx';
+import CollectionsPage from './features/collections/CollectionsPage.jsx';
+import SuppliersPage from './features/suppliers/SuppliersPage.jsx';
 
-// Protected placeholder home (filled by 6.3-6.5: inventory, apartados,
-// credit, collections, suppliers). Hosts the app shell header + logout.
-function Home() {
+function AppShell() {
   const { data, isError } = useConfig();
   const config = data ?? DEFAULT_CONFIG;
   const { logOut } = useAuthActions();
@@ -45,23 +51,26 @@ function Home() {
       <header>
         <h1>{config.businessName}</h1>
         {isError && (
-          <p role="alert">
-            No se pudo cargar la configuración del negocio; se muestran valores por defecto.
-          </p>
+          <p role="alert">No se pudo cargar la configuración del negocio; se muestran valores por defecto.</p>
         )}
-      </header>
-      <p>Sistema de inventario y cobranzas</p>
-      {whatsappHref && (
-        <p>
-          <a href={whatsappHref} title="Contactar por WhatsApp">
+        <nav>
+          <NavLink to="/inventory">Inventario</NavLink>
+          <NavLink to="/apartados">Apartados</NavLink>
+          <NavLink to="/credit-sales">Venta a crédito</NavLink>
+          <NavLink to="/cobros">Cobranzas</NavLink>
+          <NavLink to="/payments">Pagos</NavLink>
+          <NavLink to="/proveedores">Proveedores</NavLink>
+        </nav>
+        {whatsappHref && (
+          <a href={whatsappHref} title="Contacto por WhatsApp">
             {config.whatsappNumber}
           </a>
-        </p>
-      )}
-      <p>Panel principal — las secciones se agregan en las próximas versiones.</p>
-      <button type="button" onClick={handleLogout}>
-        Cerrar sesión
-      </button>
+        )}
+        <button type="button" onClick={handleLogout}>
+          Cerrar sesión
+        </button>
+      </header>
+      <Outlet />
     </div>
   );
 }
@@ -78,8 +87,16 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route element={<RequireAuth />}>
-        <Route path="/" element={<Home />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route element={<AppShell />}>
+          <Route index element={<Navigate to="/inventory" replace />} />
+          <Route path="inventory" element={<InventoryPage />} />
+          <Route path="apartados" element={<ApartadosPage />} />
+          <Route path="credit-sales" element={<CreditSalesPage />} />
+          <Route path="cobros" element={<CollectionsPage />} />
+          <Route path="payments" element={<PaymentsPanel />} />
+          <Route path="proveedores" element={<SuppliersPage />} />
+          <Route path="*" element={<Navigate to="/inventory" replace />} />
+        </Route>
       </Route>
     </Routes>
   );
