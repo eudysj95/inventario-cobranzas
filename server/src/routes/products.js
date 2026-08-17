@@ -115,17 +115,22 @@ export default function productsRouter(pool) {
     }
 
     const { rows } = await pool.query(
-      `WITH ins AS (
-         INSERT INTO products (name, description, price, quantity)
-         VALUES ($1, $2, $3, $4)
-         RETURNING id
-       )
-       ${PRODUCT_SELECT}
-       JOIN ins ON ins.id = v.id`,
+      'INSERT INTO products (name, description, price, quantity) VALUES ($1, $2, $3, $4) RETURNING id',
       [name.trim(), description ?? null, price, quantity]
     );
 
-    return res.status(201).json({ product: toProduct(rows[0]) });
+    // NOTE: reading the created row through the view MUST be a separate
+    // statement. A data-modifying CTE shares the statement snapshot, so the
+    // main query cannot see the row it just inserted (Postgres docs: "RETURNING
+    // data is the only way to communicate changes between different WITH
+    // sub-statements and the main query") — the old WITH ... JOIN returned
+    // zero rows and crashed toProduct.
+    const { rows: productRows } = await pool.query(
+      `${PRODUCT_SELECT} WHERE v.id = $1`,
+      [rows[0].id]
+    );
+
+    return res.status(201).json({ product: toProduct(productRows[0]) });
   });
 
   router.get('/:id', async (req, res) => {
