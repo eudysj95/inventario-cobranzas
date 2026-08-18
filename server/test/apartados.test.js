@@ -179,7 +179,9 @@ test(
     assert.equal(apartado.remaining, 100);
     assert.equal(apartado.customer_name, 'Apartado Customer');
 
-    const detail = await AUTHED.get(`/api/products/${productId}`);
+    const detail = await request(api)
+      .get(`/api/products/${productId}`)
+      .set('Cookie', authCookie);
     assert.equal(detail.body.product.quantity, 3, 'stock decremented by reserved units');
     assert.equal(detail.body.product.apartado_units, 2);
     assert.equal(detail.body.product.state, 'apartado');
@@ -206,11 +208,15 @@ test(
     assert.equal(res.status, 400);
     assert.equal(res.body.error, 'Insufficient stock for the requested units');
 
-    const detail = await AUTHED.get(`/api/products/${productId}`);
+    const detail = await request(api)
+      .get(`/api/products/${productId}`)
+      .set('Cookie', authCookie);
     assert.equal(detail.body.product.quantity, 1, 'quantity unchanged after rejection');
     assert.equal(detail.body.product.apartado_units, 0);
 
-    const list = await AUTHED.get(`/api/apartados?customerId=${customerId}`);
+    const list = await request(api)
+      .get(`/api/apartados?customerId=${customerId}`)
+      .set('Cookie', authCookie);
     assert.equal(list.body.apartados.length, 0, 'no apartado row persisted');
   }
 );
@@ -235,14 +241,20 @@ test(
       dueDate: '2026-12-31',
     });
 
-    const cancel = await AUTHED.post(`/api/apartados/${apartado.id}/cancel`);
+    const cancel = await request(api)
+      .post(`/api/apartados/${apartado.id}/cancel`)
+      .set('Cookie', authCookie);
     assert.equal(cancel.status, 200);
     assert.equal(cancel.body.apartado.status, 'cancelled');
 
-    const detail = await AUTHED.get(`/api/products/${productId}`);
+    const detail = await request(api)
+      .get(`/api/products/${productId}`)
+      .set('Cookie', authCookie);
     assert.equal(detail.body.product.quantity, 5, 'reserved units returned to stock');
 
-    const again = await AUTHED.post(`/api/apartados/${apartado.id}/cancel`);
+    const again = await request(api)
+      .post(`/api/apartados/${apartado.id}/cancel`)
+      .set('Cookie', authCookie);
     assert.equal(again.status, 409);
     assert.equal(again.body.error, 'Only pending apartados can be cancelled');
 
@@ -255,15 +267,24 @@ test(
       agreedPrice: 50,
       dueDate: '2026-12-31',
     });
-    const paidRes = await AUTHED.post(`/api/apartados/${apartado2.id}/pay`).send({ amount: 50 });
+    const paidRes = await request(api)
+      .post(`/api/apartados/${apartado2.id}/pay`)
+      .set('Cookie', authCookie)
+      .send({ amount: 50 });
     assert.equal(paidRes.status, 200);
     assert.equal(paidRes.body.apartado.status, 'paid');
 
-    const paidCancel = await AUTHED.post(`/api/apartados/${apartado2.id}/cancel`);
+    const paidCancel = await request(api)
+      .post(`/api/apartados/${apartado2.id}/cancel`)
+      .set('Cookie', authCookie);
     assert.equal(paidCancel.status, 409);
 
-    const stock2 = await AUTHED.get(`/api/products/${product2}`);
-    assert.equal(stock2.body.product.quantity, 3, 'paid units never restored');
+    const stock2 = await request(api)
+      .get(`/api/products/${product2}`)
+      .set('Cookie', authCookie);
+    // Product2 started at 3; apartado2 reserved 1 (now 2). Rejecting the
+    // cancel of a paid apartado must leave the sold unit out of stock.
+    assert.equal(stock2.body.product.quantity, 2, 'paid units never restored');
   }
 );
 
@@ -287,34 +308,50 @@ test(
     });
 
     // Partial abono: stays pending, cumulative tracked, NO stock change.
-    const partial = await AUTHED.post(`/api/apartados/${apartado.id}/pay`).send({ amount: 40 });
+    const partial = await request(api)
+      .post(`/api/apartados/${apartado.id}/pay`)
+      .set('Cookie', authCookie)
+      .send({ amount: 40 });
     assert.equal(partial.status, 200);
     assert.equal(partial.body.apartado.status, 'pending');
     assert.equal(partial.body.apartado.paid_total, 40);
     assert.equal(partial.body.apartado.remaining, 60);
 
-    const stockAfterPartial = await AUTHED.get(`/api/products/${productId}`);
+    const stockAfterPartial = await request(api)
+      .get(`/api/products/${productId}`)
+      .set('Cookie', authCookie);
     assert.equal(stockAfterPartial.body.product.quantity, 3, 'paying does not restore stock');
 
     // Overpayment rejected (40 + 70 > 100): 400, nothing recorded.
-    const over = await AUTHED.post(`/api/apartados/${apartado.id}/pay`).send({ amount: 70 });
+    const over = await request(api)
+      .post(`/api/apartados/${apartado.id}/pay`)
+      .set('Cookie', authCookie)
+      .send({ amount: 70 });
     assert.equal(over.status, 400);
     assert.equal(over.body.error, 'Payment exceeds the remaining balance of the apartado');
 
     // Second abono to exactly the agreed price flips to paid.
-    const full = await AUTHED.post(`/api/apartados/${apartado.id}/pay`).send({ amount: 60 });
+    const full = await request(api)
+      .post(`/api/apartados/${apartado.id}/pay`)
+      .set('Cookie', authCookie)
+      .send({ amount: 60 });
     assert.equal(full.status, 200);
     assert.equal(full.body.apartado.status, 'paid');
     assert.equal(full.body.apartado.paid_total, 100);
     assert.equal(full.body.apartado.remaining, 0);
 
     // Paying a paid apartado is a conflict.
-    const paidPay = await AUTHED.post(`/api/apartados/${apartado.id}/pay`).send({ amount: 5 });
+    const paidPay = await request(api)
+      .post(`/api/apartados/${apartado.id}/pay`)
+      .set('Cookie', authCookie)
+      .send({ amount: 5 });
     assert.equal(paidPay.status, 409);
     assert.equal(paidPay.body.error, 'Only pending apartados can receive payments');
 
     // Stock still unchanged after full payment (units are sold).
-    const stockAfterFull = await AUTHED.get(`/api/products/${productId}`);
+    const stockAfterFull = await request(api)
+      .get(`/api/products/${productId}`)
+      .set('Cookie', authCookie);
     assert.equal(stockAfterFull.body.product.quantity, 3);
   }
 );
@@ -347,20 +384,29 @@ test(
     });
 
     // Pay a1 fully so the two apartados end up in different statuses.
-    await AUTHED.post(`/api/apartados/${a1.id}/pay`).send({ amount: 100 });
+    await request(api)
+      .post(`/api/apartados/${a1.id}/pay`)
+      .set('Cookie', authCookie)
+      .send({ amount: 100 });
 
-    const byCustomer = await AUTHED.get(`/api/apartados?customerId=${customerId}`);
+    const byCustomer = await request(api)
+      .get(`/api/apartados?customerId=${customerId}`)
+      .set('Cookie', authCookie);
     assert.equal(byCustomer.status, 200);
     assert.equal(byCustomer.body.apartados.length, 2);
 
-    const paidOnly = await AUTHED.get(`/api/apartados?status=paid&customerId=${customerId}`);
+    const paidOnly = await request(api)
+      .get(`/api/apartados?status=paid&customerId=${customerId}`)
+      .set('Cookie', authCookie);
     assert.equal(paidOnly.status, 200);
     assert.equal(paidOnly.body.apartados.length, 1);
     assert.equal(paidOnly.body.apartados[0].id, a1.id);
     assert.equal(paidOnly.body.apartados[0].paid_total, 100);
     assert.equal(paidOnly.body.apartados[0].remaining, 0);
 
-    const pendingOnly = await AUTHED.get(`/api/apartados?status=pending&customerId=${customerId}`);
+    const pendingOnly = await request(api)
+      .get(`/api/apartados?status=pending&customerId=${customerId}`)
+      .set('Cookie', authCookie);
     assert.equal(pendingOnly.body.apartados.length, 1);
     assert.equal(pendingOnly.body.apartados[0].remaining, 50);
   }

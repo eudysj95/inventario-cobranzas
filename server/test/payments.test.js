@@ -160,7 +160,7 @@ test(
 
     // Debt A closed at 0; debt B still open with balance 30.
     const a = await pool.query(
-      'SELECT status, balance FROM customer_debts WHERE id = $1',
+      'SELECT status, balance, closed_at FROM customer_debts WHERE id = $1',
       [debtA]
     );
     assert.equal(a.rows[0].status, 'closed');
@@ -263,7 +263,9 @@ test(
       .send({ customerId, amount: 40 });
     assert.equal(pay.status, 201);
 
-    const res = await AUTHED.get(`/api/payments?customerId=${customerId}`);
+    const res = await request(api)
+      .get(`/api/payments?customerId=${customerId}`)
+      .set('Cookie', authCookie);
     assert.equal(res.status, 200);
     assert.equal(res.body.payments.length, 1);
     const payment = res.body.payments[0];
@@ -276,7 +278,9 @@ test(
     assert.equal(allocB.amount, 10);
 
     // Unfiltered history also lists the payment (robust across shared DB runs).
-    const all = await AUTHED.get('/api/payments');
+    const all = await request(api)
+      .get('/api/payments')
+      .set('Cookie', authCookie);
     assert.equal(all.status, 200);
     assert.ok(
       all.body.payments.some((p) => p.id === payment.id),

@@ -231,27 +231,41 @@ test(
     const id = await createProduct(api, unique('patchable'), 3);
 
     // Restock: signed positive adjustment adds units.
-    const restock = await AUTHED.patch(`/api/products/${id}`).send({ quantity: 5 });
+    const restock = await request(api)
+      .patch(`/api/products/${id}`)
+      .set('Cookie', authCookie)
+      .send({ quantity: 5 });
     assert.equal(restock.status, 200);
     assert.equal(restock.body.product.quantity, 8);
     assert.equal(restock.body.product.state, 'available');
 
     // Removal beyond available stock is rejected and stock is unchanged.
-    const tooMuch = await AUTHED.patch(`/api/products/${id}`).send({ quantity: -9 });
+    const tooMuch = await request(api)
+      .patch(`/api/products/${id}`)
+      .set('Cookie', authCookie)
+      .send({ quantity: -9 });
     assert.equal(tooMuch.status, 400);
     assert.equal(tooMuch.body.error, 'Insufficient stock — quantity cannot go below 0');
 
-    const after = await AUTHED.get(`/api/products/${id}`);
+    const after = await request(api)
+      .get(`/api/products/${id}`)
+      .set('Cookie', authCookie);
     assert.equal(after.body.product.quantity, 8, 'quantity unchanged after rejection');
 
     // Field-only patch leaves quantity untouched.
-    const rename = await AUTHED.patch(`/api/products/${id}`).send({ name: unique('renamed') });
+    const rename = await request(api)
+      .patch(`/api/products/${id}`)
+      .set('Cookie', authCookie)
+      .send({ name: unique('renamed') });
     assert.equal(rename.status, 200);
     assert.equal(rename.body.product.quantity, 8);
     assert.match(rename.body.product.name, /renamed/);
 
     // Exact removal is allowed and flips the derived state to sold.
-    const zero = await AUTHED.patch(`/api/products/${id}`).send({ quantity: -8 });
+    const zero = await request(api)
+      .patch(`/api/products/${id}`)
+      .set('Cookie', authCookie)
+      .send({ quantity: -8 });
     assert.equal(zero.status, 200);
     assert.equal(zero.body.product.quantity, 0);
     assert.equal(zero.body.product.state, 'sold');
@@ -282,7 +296,9 @@ test(
       [randomUUID(), customerId, productId, randomUUID()]
     );
 
-    const res = await AUTHED.get(`/api/products/${productId}`);
+    const res = await request(api)
+      .get(`/api/products/${productId}`)
+      .set('Cookie', authCookie);
     assert.equal(res.status, 200);
     const { product, open_apartados, open_debts } = res.body;
 
@@ -317,16 +333,22 @@ test(
 
     // qty > 0 -> rejected.
     const withStock = await createProduct(api, unique('with-stock'), 3);
-    const stockRes = await AUTHED.delete(`/api/products/${withStock}`);
+    const stockRes = await request(api)
+      .delete(`/api/products/${withStock}`)
+      .set('Cookie', authCookie);
     assert.equal(stockRes.status, 409);
     assert.equal(stockRes.body.error, 'Cannot delete a product with stock remaining');
 
     // qty = 0, no records -> deleted.
     const clean = await createProduct(api, unique('clean-delete'), 0);
-    const cleanRes = await AUTHED.delete(`/api/products/${clean}`);
+    const cleanRes = await request(api)
+      .delete(`/api/products/${clean}`)
+      .set('Cookie', authCookie);
     assert.equal(cleanRes.status, 200);
     assert.deepEqual(cleanRes.body, { ok: true });
-    const gone = await AUTHED.get(`/api/products/${clean}`);
+    const gone = await request(api)
+      .get(`/api/products/${clean}`)
+      .set('Cookie', authCookie);
     assert.equal(gone.status, 404);
 
     // qty = 0 with a pending apartado -> rejected (open records).
@@ -336,7 +358,9 @@ test(
        VALUES ($1, $2, $3, 1, 25, 'pending')`,
       [randomUUID(), customerId, openApartado]
     );
-    const apartadoRes = await AUTHED.delete(`/api/products/${openApartado}`);
+    const apartadoRes = await request(api)
+      .delete(`/api/products/${openApartado}`)
+      .set('Cookie', authCookie);
     assert.equal(apartadoRes.status, 409);
     assert.equal(apartadoRes.body.error, 'Cannot delete a product with open apartados or debts');
 
@@ -347,7 +371,9 @@ test(
        VALUES ($1, $2, $3, $4, 1, 30, 30, 'open')`,
       [randomUUID(), customerId, openDebt, randomUUID()]
     );
-    const debtRes = await AUTHED.delete(`/api/products/${openDebt}`);
+    const debtRes = await request(api)
+      .delete(`/api/products/${openDebt}`)
+      .set('Cookie', authCookie);
     assert.equal(debtRes.status, 409);
 
     // qty = 0 with only PAID apartados -> FK RESTRICT translates to 409.
@@ -357,12 +383,16 @@ test(
        VALUES ($1, $2, $3, 1, 20, 'paid')`,
       [randomUUID(), customerId, sold]
     );
-    const soldRes = await AUTHED.delete(`/api/products/${sold}`);
+    const soldRes = await request(api)
+      .delete(`/api/products/${sold}`)
+      .set('Cookie', authCookie);
     assert.equal(soldRes.status, 409);
     assert.equal(soldRes.body.error, 'Cannot delete a product with sales history');
 
     // Unknown id -> 404.
-    const missing = await AUTHED.delete(`/api/products/${randomUUID()}`);
+    const missing = await request(api)
+      .delete(`/api/products/${randomUUID()}`)
+      .set('Cookie', authCookie);
     assert.equal(missing.status, 404);
   }
 );

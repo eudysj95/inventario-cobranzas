@@ -121,18 +121,25 @@ test(
     await runMigration(pool);
     const api = testApp(pool);
 
-    const withPhone = await AUTHED.post('/api/customers')
+    const withPhone = await request(api)
+      .post('/api/customers')
+      .set('Cookie', authCookie)
       .send({ name: unique('Ana'), phone: '  +54 11 5555 ' });
     assert.equal(withPhone.status, 201);
     assert.equal(withPhone.body.customer.phone, '+54 11 5555', 'phone is trimmed');
     assert.equal(withPhone.body.customer.open_balance, 0);
 
-    const emptyPhone = await AUTHED.post('/api/customers')
+    const emptyPhone = await request(api)
+      .post('/api/customers')
+      .set('Cookie', authCookie)
       .send({ name: unique('Bob'), phone: '   ' });
     assert.equal(emptyPhone.status, 201);
     assert.equal(emptyPhone.body.customer.phone, null, 'blank phone is stored as null');
 
-    const noPhone = await AUTHED.post('/api/customers').send({ name: unique('Caro') });
+    const noPhone = await request(api)
+      .post('/api/customers')
+      .set('Cookie', authCookie)
+      .send({ name: unique('Caro') });
     assert.equal(noPhone.status, 201);
     assert.equal(noPhone.body.customer.phone, null);
   }
@@ -226,21 +233,32 @@ test(
 
     const id = await createCustomer(api, unique('Patch Me'), '555-1234');
 
-    const renamed = await AUTHED.patch(`/api/customers/${id}`)
+    const renamed = await request(api)
+      .patch(`/api/customers/${id}`)
+      .set('Cookie', authCookie)
       .send({ name: unique('Patched Name') });
     assert.equal(renamed.status, 200);
     assert.match(renamed.body.customer.name, /Patched Name/);
     assert.equal(renamed.body.customer.phone, '555-1234', 'phone untouched');
 
-    const newPhone = await AUTHED.patch(`/api/customers/${id}`).send({ phone: '555-9999' });
+    const newPhone = await request(api)
+      .patch(`/api/customers/${id}`)
+      .set('Cookie', authCookie)
+      .send({ phone: '555-9999' });
     assert.equal(newPhone.status, 200);
     assert.equal(newPhone.body.customer.phone, '555-9999');
 
-    const cleared = await AUTHED.patch(`/api/customers/${id}`).send({ phone: null });
+    const cleared = await request(api)
+      .patch(`/api/customers/${id}`)
+      .set('Cookie', authCookie)
+      .send({ phone: null });
     assert.equal(cleared.status, 200);
     assert.equal(cleared.body.customer.phone, null, 'null clears the phone');
 
-    const missing = await AUTHED.patch(`/api/customers/${randomUUID()}`).send({ name: 'X' });
+    const missing = await request(api)
+      .patch(`/api/customers/${randomUUID()}`)
+      .set('Cookie', authCookie)
+      .send({ name: 'X' });
     assert.equal(missing.status, 404);
   }
 );
@@ -267,7 +285,9 @@ test(
       [id]
     );
 
-    const res = await AUTHED.get(`/api/customers/${id}`);
+    const res = await request(api)
+      .get(`/api/customers/${id}`)
+      .set('Cookie', authCookie);
     assert.equal(res.status, 200);
     assert.equal(res.body.customer.open_balance, 80);
 
@@ -292,10 +312,14 @@ test(
 
     // Clean customer -> deleted.
     const clean = await createCustomer(api, unique('Clean Customer'));
-    const cleanRes = await AUTHED.delete(`/api/customers/${clean}`);
+    const cleanRes = await request(api)
+      .delete(`/api/customers/${clean}`)
+      .set('Cookie', authCookie);
     assert.equal(cleanRes.status, 200);
     assert.deepEqual(cleanRes.body, { ok: true });
-    const gone = await AUTHED.get(`/api/customers/${clean}`);
+    const gone = await request(api)
+      .get(`/api/customers/${clean}`)
+      .set('Cookie', authCookie);
     assert.equal(gone.status, 404);
 
     // Open debt -> rejected.
@@ -305,7 +329,9 @@ test(
        VALUES ($1, $2, $3, $4, 1, 40, 40, 'open')`,
       [randomUUID(), withDebt, productId, randomUUID()]
     );
-    const debtRes = await AUTHED.delete(`/api/customers/${withDebt}`);
+    const debtRes = await request(api)
+      .delete(`/api/customers/${withDebt}`)
+      .set('Cookie', authCookie);
     assert.equal(debtRes.status, 409);
     assert.equal(debtRes.body.error, 'Cannot delete a customer with open apartados or debts');
 
@@ -316,7 +342,9 @@ test(
        VALUES ($1, $2, $3, 1, 20, 'pending')`,
       [randomUUID(), withApartado, productId]
     );
-    const apartadoRes = await AUTHED.delete(`/api/customers/${withApartado}`);
+    const apartadoRes = await request(api)
+      .delete(`/api/customers/${withApartado}`)
+      .set('Cookie', authCookie);
     assert.equal(apartadoRes.status, 409);
 
     // Only payment history -> FK RESTRICT translates to 409.
@@ -325,7 +353,9 @@ test(
       "INSERT INTO payments (customer_id, amount) VALUES ($1, 10)",
       [withPayments]
     );
-    const paymentsRes = await AUTHED.delete(`/api/customers/${withPayments}`);
+    const paymentsRes = await request(api)
+      .delete(`/api/customers/${withPayments}`)
+      .set('Cookie', authCookie);
     assert.equal(paymentsRes.status, 409);
     assert.equal(
       paymentsRes.body.error,
@@ -333,7 +363,9 @@ test(
     );
 
     // Unknown id -> 404.
-    const missing = await AUTHED.delete(`/api/customers/${randomUUID()}`);
+    const missing = await request(api)
+      .delete(`/api/customers/${randomUUID()}`)
+      .set('Cookie', authCookie);
     assert.equal(missing.status, 404);
   }
 );
