@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { requireAuth } from '../auth.js';
 import { badRequest, isDateString, isUuid, notFound } from '../http.js';
 import { withTransaction } from '../services/txn.js';
+import { toDateString } from '../lib/dates.js';
 
 /**
  * Credit-sales routes (task 4.3):
@@ -19,6 +20,20 @@ import { withTransaction } from '../services/txn.js';
 /** pg returns NUMERIC as string; expose money as JSON numbers at the edge. */
 function toLine(row) {
   return { ...row, amount: Number(row.amount), balance: Number(row.balance) };
+}
+
+/**
+ * Abort a credit-sale TXN with a specific failure. Throwing (instead of
+ * returning a status) is what makes withTransaction ROLL BACK: a normally
+ * returned value is COMMITTED, and by the time a later line fails, earlier
+ * lines already decremented stock — only a throw preserves the spec's
+ * "on any failure neither change persists".
+ */
+class CreditSaleAbort extends Error {
+  constructor(status) {
+    super(status);
+    this.status = status;
+  }
 }
 
 /**
@@ -53,7 +68,10 @@ async function fetchSale(pool, saleId) {
     customer_name: rows[0].customer_name,
     created_at: rows[0].created_at,
     total: Number(rows[0].total),
-    lines: lines.map(toLine),
+    lines: lines.map((r) => ({
+      ...toLine(r),
+      due_date: toDateString(r.due_date),
+    })),
   };
 }
 
@@ -108,68 +126,78 @@ export default function creditSalesRouter(pool) {
     // Grouping key generated server-side so every line of this sale shares it.
     const saleId = randomUUID();
 
-    const result = await withTransaction(pool, async (client) => {
-      const customer = await client.query(
-        'SELECT 1 FROM customers WHERE id = $1',
-        [customerId]
-      );
-      if (customer.rows.length === 0) return { status: 'customer-missing' };
-
-      for (const line of normalized) {
-        // Guarded decrement per line: only touched when enough stock exists.
-        const stock = await client.query(
-          `UPDATE products SET quantity = quantity - $1, updated_at = now()
-           WHERE id = $2 AND quantity >= $1
-           RETURNING id`,
-          [line.units, line.productId]
+    let result;
+    try {
+      result = await withTransaction(pool, async (client) => {
+        const customer = await client.query(
+          'SELECT 1 FROM customers WHERE id = $1',
+          [customerId]
         );
-        if (stock.rows.length === 0) {
-          const exists = await client.query(
-            'SELECT 1 FROM products WHERE id = $1',
-            [line.productId]
+        if (customer.rows.length === 0) return { status: 'customer-missing' };
+
+        for (const line of normalized) {
+          // Guarded decrement per line: only touched when enough stock exists.
+          const stock = await client.query(
+            `UPDATE products SET quantity = quantity - $1, updated_at = now()
+             WHERE id = $2 AND quantity >= $1
+             RETURNING id`,
+            [line.units, line.productId]
           );
-          if (exists.rows.length === 0) return { status: 'product-missing' };
-          return { status: 'insufficient-stock' };
-        }
+          if (stock.rows.length === 0) {
+            const exists = await client.query(
+              'SELECT 1 FROM products WHERE id = $1',
+              [line.productId]
+            );
+            if (exists.rows.length === 0) {
+              throw new CreditSaleAbort('product-missing');
+            }
+            throw new CreditSaleAbort('insufficient-stock');
+          }
 
-        // Line price: explicit value wins, otherwise the catalog price.
-        let unitPrice = line.price;
-        if (unitPrice === undefined) {
-          const { rows: productRows } = await client.query(
-            'SELECT price FROM products WHERE id = $1',
-            [line.productId]
+          // Line price: explicit value wins, otherwise the catalog price.
+          let unitPrice = line.price;
+          if (unitPrice === undefined) {
+            const { rows: productRows } = await client.query(
+              'SELECT price FROM products WHERE id = $1',
+              [line.productId]
+            );
+            unitPrice = Number(productRows[0].price);
+          }
+          const amount = roundMoney(line.units * unitPrice);
+
+          await client.query(
+            `INSERT INTO customer_debts
+               (customer_id, product_id, sale_id, units, amount, balance, due_date)
+             VALUES ($1, $2, $3, $4, $5, $5, $6)`,
+            [
+              customerId,
+              line.productId,
+              saleId,
+              line.units,
+              amount.toFixed(2),
+              dueDate ?? null,
+            ]
           );
-          unitPrice = Number(productRows[0].price);
         }
-        const amount = roundMoney(line.units * unitPrice);
-
-        await client.query(
-          `INSERT INTO customer_debts
-             (customer_id, product_id, sale_id, units, amount, balance, due_date)
-           VALUES ($1, $2, $3, $4, $5, $5, $6)`,
-          [
-            customerId,
-            line.productId,
-            saleId,
-            line.units,
-            amount.toFixed(2),
-            dueDate ?? null,
-          ]
-        );
-      }
-      return { status: 'ok' };
-    });
-
-    switch (result.status) {
-      case 'customer-missing':
-        return notFound(res, 'Customer not found');
-      case 'product-missing':
-        return notFound(res, 'Product not found');
-      case 'insufficient-stock':
+        return { status: 'ok' };
+      });
+    } catch (err) {
+      // CreditSaleAbort already rolled the TXN back inside withTransaction.
+      if (err instanceof CreditSaleAbort) {
+        if (err.status === 'product-missing') {
+          return notFound(res, 'Product not found');
+        }
         return badRequest(
           res,
           'Insufficient stock for one or more lines — nothing was recorded'
         );
+      }
+      throw err;
+    }
+
+    switch (result.status) {
+      case 'customer-missing':
+        return notFound(res, 'Customer not found');
       default: {
         const sale = await fetchSale(pool, saleId);
         return res.status(201).json({ sale });
