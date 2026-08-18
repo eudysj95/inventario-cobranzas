@@ -151,17 +151,28 @@ test(
     assert.equal(sale.lines.length, 2);
     assert.equal(sale.total, 45, 'catalog price 10*2 + explicit line price 25*1');
 
-    const [line1, line2] = sale.lines;
+    // All lines of a sale share the same transaction created_at, so the API
+    // orders them by (created_at, id) — find each line by product instead of
+    // relying on array position.
+    const lineByProduct = Object.fromEntries(
+      sale.lines.map((l) => [l.product_id, l])
+    );
+    const line1 = lineByProduct[p1];
+    const line2 = lineByProduct[p2];
     assert.equal(line1.amount, 20, 'catalog price applied when price omitted');
     assert.equal(line1.balance, 20, 'open debt starts at its full amount');
     assert.equal(line1.status, 'open');
     assert.equal(line1.due_date, '2026-11-30');
     assert.equal(line2.amount, 25);
 
-    const d1 = await AUTHED.get(`/api/products/${p1}`);
+    const d1 = await request(api)
+      .get(`/api/products/${p1}`)
+      .set('Cookie', authCookie);
     assert.equal(d1.body.product.quantity, 3, 'line 1 units decremented');
     assert.equal(d1.body.product.credit_units, 2);
-    const d2 = await AUTHED.get(`/api/products/${p2}`);
+    const d2 = await request(api)
+      .get(`/api/products/${p2}`)
+      .set('Cookie', authCookie);
     assert.equal(d2.body.product.quantity, 3, 'line 2 units decremented');
   }
 );
@@ -197,7 +208,9 @@ test(
     );
 
     // Atomicity: the OK line's stock decrement was rolled back too.
-    const d1 = await AUTHED.get(`/api/products/${okProduct}`);
+    const d1 = await request(api)
+      .get(`/api/products/${okProduct}`)
+      .set('Cookie', authCookie);
     assert.equal(d1.body.product.quantity, 5, 'first line decrement rolled back');
 
     const { rows } = await pool.query(
@@ -226,14 +239,18 @@ test(
       .send({ customerId, lines: [{ productId: p1, units: 1 }] });
     assert.equal(created.status, 201);
 
-    const res = await AUTHED.get(`/api/credit-sales/${created.body.sale.id}`);
+    const res = await request(api)
+      .get(`/api/credit-sales/${created.body.sale.id}`)
+      .set('Cookie', authCookie);
     assert.equal(res.status, 200);
     assert.equal(res.body.sale.lines.length, 1);
     assert.equal(res.body.sale.lines[0].amount, 15);
     assert.equal(res.body.sale.total, 15);
     assert.equal(res.body.sale.customer_name, 'Detail Credit');
 
-    const missing = await AUTHED.get(`/api/credit-sales/${randomUUID()}`);
+    const missing = await request(api)
+      .get(`/api/credit-sales/${randomUUID()}`)
+      .set('Cookie', authCookie);
     assert.equal(missing.status, 404);
   }
 );

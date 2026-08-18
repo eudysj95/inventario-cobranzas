@@ -116,7 +116,9 @@ test(
       [randomUUID(), customerId, productId, randomUUID(), dateFromNow(5)]
     );
 
-    const res = await AUTHED.get('/api/collections/due?horizonDays=7');
+    const res = await request(api)
+      .get('/api/collections/due?horizonDays=7')
+      .set('Cookie', authCookie);
     assert.equal(res.status, 200);
     const row = res.body.customers.find((c) => c.customerId === customerId);
     assert.ok(row, 'customer appears in the due view');
@@ -170,7 +172,9 @@ test(
       [randomUUID(), farCustomer, productId, randomUUID(), dateFromNow(30)]
     );
 
-    const res = await AUTHED.get('/api/collections/due?horizonDays=7');
+    const res = await request(api)
+      .get('/api/collections/due?horizonDays=7')
+      .set('Cookie', authCookie);
     const overdueRow = res.body.customers.find(
       (c) => c.customerId === overdueCustomer
     );
@@ -210,7 +214,9 @@ test(
       [randomUUID(), customerId, productId, randomUUID(), dateFromNow(-1)]
     );
 
-    const res = await AUTHED.get('/api/collections/due?horizonDays=7');
+    const res = await request(api)
+      .get('/api/collections/due?horizonDays=7')
+      .set('Cookie', authCookie);
     assert.equal(
       res.body.customers.find((c) => c.customerId === customerId),
       undefined,
@@ -239,8 +245,14 @@ test(
       [randomUUID(), customerId, productId, randomUUID(), dateFromNow(90)]
     );
 
-    const res = await AUTHED.get('/api/collections/due?horizonDays=7');
+    const res = await request(api)
+      .get('/api/collections/due?horizonDays=7')
+      .set('Cookie', authCookie);
     assert.equal(res.status, 200);
-    assert.deepEqual(res.body.customers, [], 'no overdue/soon-due obligations');
+    // The due view is scoped by unique customer: other runs' (and this run's
+    // earlier) in-horizon rows legitimately remain in the shared DB, so only
+    // THIS customer's absence proves the far-future obligation never surfaces.
+    const quiet = res.body.customers.find((c) => c.customerId === customerId);
+    assert.equal(quiet, undefined, 'far-future obligation never appears in the due view');
   }
 );

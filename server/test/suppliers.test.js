@@ -268,20 +268,29 @@ test(
       .get('/api/supplier-debts?status=open')
       .set('Cookie', authCookie);
     assert.equal(open.status, 200);
-    assert.equal(open.body.debts.length, 2);
+    // The shared test DB accumulates rows from every run, so counts are
+    // scoped to this test's unique suppliers; the API's due-date ordering is
+    // asserted within that subset (leftover rows cannot skew the numbers).
+    const openMine = open.body.debts.filter(
+      (d) => d.supplier_id === alpha.id || d.supplier_id === beta.id
+    );
+    assert.equal(openMine.length, 2);
     // Ordered by due date ascending: the overdue (2020) debt first.
-    assert.equal(open.body.debts[0].due_date, oldDue);
-    assert.equal(open.body.debts[0].overdue, true, 'past due date flagged overdue');
-    assert.equal(open.body.debts[1].overdue, false, 'future due date not overdue');
+    assert.equal(openMine[0].due_date, oldDue);
+    assert.equal(openMine[0].overdue, true, 'past due date flagged overdue');
+    assert.equal(openMine[1].overdue, false, 'future due date not overdue');
 
     const closed = await request(api)
       .get('/api/supplier-debts?status=closed')
       .set('Cookie', authCookie);
     assert.equal(closed.status, 200);
+    const closedMine = closed.body.debts.filter(
+      (d) => d.supplier_id === alpha.id || d.supplier_id === beta.id
+    );
     assert.deepEqual(
-      closed.body.debts.map((d) => d.id),
+      closedMine.map((d) => d.id),
       [closedId],
-      'closed filter returns only closed debts'
+      'closed filter returns only this run\'s closed debt'
     );
   }
 );
@@ -455,19 +464,22 @@ test(
       .get('/api/supplier-debts/due?horizonDays=30')
       .set('Cookie', authCookie);
     assert.equal(res.status, 200);
-    assert.equal(res.body.debts.length, 2, 'only open, unpaid, in-horizon debts');
+    // Shared-DB scoping: leftover in-horizon debts from other runs are
+    // expected, so only this supplier's rows are counted and ordered.
+    const mine = res.body.debts.filter((d) => d.supplier_id === supplier.id);
+    assert.equal(mine.length, 2, 'only open, unpaid, in-horizon debts for this supplier');
     assert.deepEqual(
-      res.body.debts.map((d) => d.id).sort(),
+      mine.map((d) => d.id).sort(),
       [overdueId, soonId].sort()
     );
 
-    const byId = Object.fromEntries(res.body.debts.map((d) => [d.id, d]));
+    const byId = Object.fromEntries(mine.map((d) => [d.id, d]));
     assert.equal(byId[overdueId].overdue, true, 'past-due debt flagged overdue');
     assert.equal(byId[overdueId].soon_due, false);
     assert.equal(byId[soonId].overdue, false);
     assert.equal(byId[soonId].soon_due, true, 'in-horizon future debt flagged soon-due');
 
     // Ordered by due date ascending: overdue (2020) first.
-    assert.equal(res.body.debts[0].id, overdueId);
+    assert.equal(mine[0].id, overdueId);
   }
 );

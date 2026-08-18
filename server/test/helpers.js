@@ -17,7 +17,9 @@ export function createTestPool() {
   return new pg.Pool({
     connectionString: url,
     max: 3,
-    connectionTimeoutMillis: 1500,
+    // Generous timeouts: Neon serverless cold-starts can take several seconds
+    // and the probe in each test file runs before the first warm query.
+    connectionTimeoutMillis: 10000,
     idleTimeoutMillis: 5000,
   });
 }
@@ -26,7 +28,7 @@ export function createTestPool() {
 export async function canReachDb(pool) {
   if (!pool) return false;
   try {
-    await pool.query({ text: 'SELECT 1', query_timeout: 2000 });
+    await pool.query({ text: 'SELECT 1', query_timeout: 10000 });
     return true;
   } catch {
     return false;
