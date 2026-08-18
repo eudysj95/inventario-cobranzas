@@ -27,10 +27,11 @@ export function formatCurrency(amount: number, config: CurrencyConfig): string {
 // Parse a date value without the UTC off-by-one: new Date('2026-08-11') is
 // UTC midnight, which renders as the PREVIOUS day in timezones west of UTC
 // (e.g. es-AR is UTC-3). Local-midnight parsing keeps the displayed day
-// identical to the stored date. The server wire format for DATE columns is a
-// full ISO timestamp ("2026-08-11T00:00:00.000Z" — pg serializes DATE via
-// Date#toISOString), so only the leading date part is parsed and the time is
-// ignored: the local-midnight intent is preserved either way. Returns null
+// identical to the stored date. The server wire format for DATE columns is
+// 'YYYY-MM-DD' (routes normalize via toDateString), but older payloads may
+// still carry a full ISO timestamp ("2026-08-11T00:00:00.000Z" — pg's default
+// DATE serialization), so only the leading date part is parsed and the time
+// is ignored: the local-midnight intent is preserved either way. Returns null
 // for null/undefined, non-date strings and impossible dates.
 function parseDate(value: string | Date | null | undefined): Date | null {
   if (value == null) return null;
