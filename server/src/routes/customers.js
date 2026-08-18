@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requireAuth } from '../auth.js';
 import { badRequest, conflict, isUuid, notFound } from '../http.js';
 import { withTransaction } from '../services/txn.js';
+import { toDateString } from '../lib/dates.js';
 
 /**
  * Customers routes (task 3.2):
@@ -66,7 +67,12 @@ function toCustomer(row) {
 }
 
 function toOpenDebt(row) {
-  return { ...row, amount: Number(row.amount), balance: Number(row.balance) };
+  return {
+    ...row,
+    amount: Number(row.amount),
+    balance: Number(row.balance),
+    due_date: toDateString(row.due_date),
+  };
 }
 
 function toPayment(row) {

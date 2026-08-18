@@ -8,6 +8,7 @@ import {
   notFound,
 } from '../http.js';
 import { withTransaction } from '../services/txn.js';
+import { toDateString } from '../lib/dates.js';
 
 /**
  * Apartados routes (tasks 4.1 + 4.2):
@@ -53,6 +54,7 @@ function toApartado(row) {
     agreed_price: Number(row.agreed_price),
     paid_total: Number(row.paid_total),
     remaining: Number(row.remaining),
+    due_date: toDateString(row.due_date),
   };
 }
 

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requireAuth } from '../auth.js';
 import { badRequest, conflict, isDateString, isUuid, notFound } from '../http.js';
 import { withTransaction } from '../services/txn.js';
+import { toDateString } from '../lib/dates.js';
 
 /**
  * Supplier debts routes (tasks 5.1 + 5.2):
@@ -39,7 +40,12 @@ const DEBT_SELECT = `
 
 /** pg returns NUMERIC as string; expose money as JSON numbers at the edge. */
 function toDebt(row) {
-  return { ...row, amount: Number(row.amount), balance: Number(row.balance) };
+  return {
+    ...row,
+    amount: Number(row.amount),
+    balance: Number(row.balance),
+    due_date: toDateString(row.due_date),
+  };
 }
 
 /** Round a money number to cents so NUMERIC(12,2) stores an exact value. */
@@ -220,6 +226,7 @@ export default function supplierDebtsRouter(pool) {
         ...r,
         amount: Number(r.amount),
         balance: Number(r.balance),
+        due_date: toDateString(r.due_date),
       })),
     });
   });
