@@ -10,6 +10,7 @@
   ],
   "scripts": {
     "db:migrate": "npm run db:migrate --workspace server",
+    "db:seed": "node server/scripts/seed-demo.js",
     "dev:server": "npm run dev --workspace server",
     "dev:client": "npm run dev --workspace client",
     "test": "npm run test --workspace server",

@@ -1,43 +1,44 @@
-// Credit sale form (task 6.4). Fields: customer (shared select) + dynamic
-// line items (product select, units, OPTIONAL per-line price that overrides the
-// catalog price when provided) + optional due date. Stock is decremented PER
-// LINE in ONE server TXN — any failing line rolls back the whole sale (atomic
-// per-line stock behavior); the client just sends the body. Blank price means
-// "use the catalog price" (server: "explicit value wins, otherwise the catalog
-// price"). UI copy in neutral Spanish.
+// Cash-sale form (task S4.1). Fields: customerId (select con CustomerSelect +
+// toggle "Nuevo cliente"), productId (select con productos del inventario),
+// units > 0, price (explicito o catálogo - omitted → price de catálogo),
+// total (computed: units * price).
+// validate() devuelve string error si falta customerId o units <= 0.
+// On submit: POST /api/cash-sales; the page handles navigation to
+// `/venta/:saleId` on success.
 
 import { useState } from 'react';
-import { buildCreditSaleBody } from '../../api/credit-sales.js';
-import CustomerSelect from '../../features/customer/CustomerSelect.jsx';
+import { useCustomers } from '../../api/customers.js';
+import { useProducts } from '../../api/products.js';
+import { useQueryClient } from '@tanstack/react-query';
+import CustomerSelect from '../../features/customer/CustomerSelect.js';
+import { formatCurrency } from '../../lib/format.js';
 
 const EMPTY_LINE = { productId: '', units: '', price: '' };
 
 function validate(values) {
   if (!values.customerId) return 'Debe seleccionar un cliente.';
-  if (values.lines.length === 0) return 'Debe agregar al menos una línea.';
   for (const [i, line] of values.lines.entries()) {
     if (!line.productId) return `La línea ${i + 1} debe tener un producto.`;
     if (!Number.isInteger(Number(line.units)) || Number(line.units) <= 0) {
       return `La línea ${i + 1} debe tener unidades enteras mayores a cero.`;
     }
-    if (line.price !== '' && (!Number.isFinite(Number(line.price)) || Number(line.price) <= 0)) {
-      // Explicit price 0 must be rejected client-side: the server accepts
-      // price >= 0 but the DB CHECK (amount > 0) then 500s on a zero line.
-      return `La línea ${i + 1} debe tener un precio mayor a cero (o vacío para usar el precio de catálogo).`;
-    }
   }
   return null;
 }
 
-export default function CreditSaleForm({ onSubmit, onCancel }) {
+export default function CashSaleForm({ onSubmit, onCancel }) {
+  const { data: customers = [], isPending: customersPending } = useCustomers('');
+  const { data: products = [], isPending: productsPending } = useProducts({});
+  const queryClient = useQueryClient();
   const [customerId, setCustomerId] = useState('');
   const [lines, setLines] = useState([{ ...EMPTY_LINE }]);
-  const [dueDate, setDueDate] = useState('');
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   function updateLine(index, field, value) {
-    setLines((prev) => prev.map((line, i) => (i === index ? { ...line, [field]: value } : line)));
+    setLines((prev) =>
+      prev.map((line, i) => (i === index ? { ...line, [field]: value } : line))
+    );
   }
 
   function addLine() {
@@ -52,28 +53,29 @@ export default function CreditSaleForm({ onSubmit, onCancel }) {
     event.preventDefault();
     setError(null);
 
-    const values = { customerId, lines, dueDate };
+    const values = { customerId, lines };
     const validationError = validate(values);
     if (validationError) {
       setError(validationError);
+      setSubmitting(false);
       return;
     }
 
     setSubmitting(true);
     try {
-      await onSubmit(buildCreditSaleBody(values));
+      await onSubmit({ customerId, lines });
     } catch (err) {
-      // Server "Insufficient stock for one or more lines — nothing was recorded"
-      // surfaces verbatim: the whole sale rolled back, nothing was recorded.
-      setError(err instanceof Error ? err.message : 'Ocurrió un error inesperado.');
+      setError(
+        err instanceof Error ? err.message : 'Ocurrió un error inesperado.'
+      );
       setSubmitting(false);
     }
   }
 
   return (
-    <div className="form-overlay" role="dialog" aria-modal="true" aria-label="Venta a crédito">
-      <form className="product-form credit-form" onSubmit={handleSubmit}>
-        <h2>Venta a crédito</h2>
+    <div className="form-overlay" role="dialog" aria-modal="true" aria-label="Venta de contado">
+      <form className="product-form cash-form" onSubmit={handleSubmit}>
+        <h2>Venta de contado</h2>
 
         {error && (
           <p className="form-error" role="alert">
@@ -84,18 +86,21 @@ export default function CreditSaleForm({ onSubmit, onCancel }) {
         <CustomerSelect
           onSelect={(customerId) => setCustomerId(customerId)}
           initialCustomerId={customerId}
+          allowCreate
         />
 
-        <div className="credit-lines">
+        <div className="cash-lines">
           <h3>Líneas</h3>
           {lines.map((line, index) => (
-            <div className="credit-line" key={index}>
-              <label htmlFor={`credit-line-${index}-product`}>
+            <div className="cash-line" key={index}>
+              <label htmlFor={`cash-line-${index}-product`}>
                 Producto
                 <select
-                  id={`credit-line-${index}-product`}
+                  id={`cash-line-${index}-product`}
                   value={line.productId}
-                  onChange={(event) => updateLine(index, 'productId', event.target.value)}
+                  onChange={(event) =>
+                    updateLine(index, 'productId', event.target.value)
+                  }
                   disabled={submitting}
                 >
                   <option value="">Seleccionar…</option>
@@ -106,34 +111,38 @@ export default function CreditSaleForm({ onSubmit, onCancel }) {
                   ))}
                 </select>
               </label>
-              <label htmlFor={`credit-line-${index}-units`}>
+              <label htmlFor={`cash-line-${index}-units`}>
                 Unidades
                 <input
-                  id={`credit-line-${index}-units`}
+                  id={`cash-line-${index}-units`}
                   type="number"
                   min="1"
                   step="1"
                   value={line.units}
-                  onChange={(event) => updateLine(index, 'units', event.target.value)}
+                  onChange={(event) =>
+                    updateLine(index, 'units', event.target.value)
+                  }
                   disabled={submitting}
                 />
               </label>
-              <label htmlFor={`credit-line-${index}-price`}>
-                Precio (opcional)
+              <label htmlFor={`cash-line-${index}-price`}>
+                Precio (opcional, catálogo si está vacío)
                 <input
-                  id={`credit-line-${index}-price`}
+                  id={`cash-line-${index}-price`}
                   type="number"
                   min="0.01"
                   step="0.01"
                   placeholder="Catálogo"
                   value={line.price}
-                  onChange={(event) => updateLine(index, 'price', event.target.value)}
+                  onChange={(event) =>
+                    updateLine(index, 'price', event.target.value)
+                  }
                   disabled={submitting}
                 />
               </label>
               <button
                 type="button"
-                className="credit-line-remove"
+                className="cash-line-remove"
                 onClick={() => removeLine(index)}
                 disabled={submitting || lines.length === 1}
               >
@@ -145,17 +154,6 @@ export default function CreditSaleForm({ onSubmit, onCancel }) {
             Agregar línea
           </button>
         </div>
-
-        <label htmlFor="credit-due">
-          Fecha de vencimiento (opcional)
-          <input
-            id="credit-due"
-            type="date"
-            value={dueDate}
-            onChange={(event) => setDueDate(event.target.value)}
-            disabled={submitting}
-          />
-        </label>
 
         <div className="form-actions">
           <button type="submit" disabled={submitting}>

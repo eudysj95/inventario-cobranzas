@@ -11,6 +11,7 @@ import apartadosRouter from './routes/apartados.js';
 import creditSalesRouter from './routes/credit-sales.js';
 import paymentsRouter from './routes/payments.js';
 import collectionsRouter from './routes/collections.js';
+import cashSalesRouter from './routes/cash-sales.js';
 import suppliersRouter from './routes/suppliers.js';
 import supplierDebtsRouter from './routes/supplier-debts.js';
 
@@ -50,6 +51,7 @@ export function createApp({ pool } = {}) {
   // Sales & payments routes (auth-guarded inside the routers).
   app.use('/api/apartados', apartadosRouter(pool));
   app.use('/api/credit-sales', creditSalesRouter(pool));
+app.use('/api/cash-sales', cashSalesRouter(pool));
   app.use('/api/payments', paymentsRouter(pool));
   app.use('/api/collections', collectionsRouter(pool));
 

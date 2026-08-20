@@ -1,14 +1,15 @@
-// Apartado create form (task 6.4). Fields: customer (select), product
-// (select), units, agreed price, due date (REQUIRED — the server rejects a
-// missing dueDate with 400). Building the apartado reserves stock server-side
-// in the same TXN as the insert. Uses the shared customers/products list
-// queries; server guard messages (e.g. insufficient stock) surface verbatim
-// via ApiError into the form error line. UI copy in neutral Spanish.
+// Apartado create form (task 6.4). Fields: customer (shared select),
+// product (select), units, agreed price, due date (REQUIRED — the server
+// rejects a missing dueDate with 400). Building the apartado reserves
+// stock server-side in the same TXN as the insert. Uses the shared
+// customers/products list queries; server guard messages (e.g. insufficient
+// stock) surface verbatim via ApiError into the form error line. UI copy
+// in neutral Spanish.
 
 import { useState } from 'react';
-import { useCustomers } from '../../api/customers.js';
 import { useProducts } from '../../api/products.js';
 import { buildApartadoBody } from '../../api/apartados.js';
+import CustomerSelect from '../../features/customer/CustomerSelect.jsx';
 
 function validate(values) {
   if (!values.customerId) return 'Debe seleccionar un cliente.';
@@ -24,7 +25,6 @@ function validate(values) {
 }
 
 export default function ApartadoForm({ onSubmit, onCancel }) {
-  const { data: customers = [] } = useCustomers('');
   const { data: products = [] } = useProducts({});
 
   const [customerId, setCustomerId] = useState('');
@@ -67,24 +67,10 @@ export default function ApartadoForm({ onSubmit, onCancel }) {
           </p>
         )}
 
-        <label htmlFor="apartado-customer">
-          Cliente
-          <select
-            id="apartado-customer"
-            value={customerId}
-            onChange={(event) => setCustomerId(event.target.value)}
-            autoFocus
-            required
-            disabled={submitting}
-          >
-            <option value="">Seleccionar…</option>
-            {customers.map((customer) => (
-              <option key={customer.id} value={customer.id}>
-                {customer.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <CustomerSelect
+          onSelect={(customerId) => setCustomerId(customerId)}
+          initialCustomerId={customerId}
+        />
 
         <label htmlFor="apartado-product">
           Producto

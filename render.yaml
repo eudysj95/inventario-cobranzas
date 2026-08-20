@@ -1,0 +1,38 @@
+# Render Blueprint for Inventario (single Web Service: API + SPA)
+# Deploy: push to main → Render auto-builds & deploys
+# Required env vars in Render dashboard:
+#   - DATABASE_URL (Neon connection string, sslmode=require)
+#   - ADMIN_USERNAME (e.g. admin)
+#   - ADMIN_PASSWORD (strong password, will be bcrypt-hashed)
+#   - JWT_SECRET (long random string, REQUIRED in production)
+#   - INSTANCE_BUSINESS_NAME (display name, e.g. "Mi Negocio")
+#   - INSTANCE_CURRENCY_SYMBOL (e.g. "$")
+#   - INSTANCE_CURRENCY_LOCALE (e.g. "es-AR")
+#   - INSTANCE_WHATSAPP_NUMBER (optional, display only)
+
+services:
+  - type: web
+    name: inventario
+    runtime: node
+    plan: free
+    # Build: install deps (root + workspaces) + build client (Vite → client/dist)
+    buildCommand: npm ci && npm run build
+    # Start: run Express server (serves API + SPA from client/dist)
+    startCommand: npm run start --workspace server
+    # Health check endpoint (no auth, hits /health)
+    healthCheckPath: /health
+    # Environment variables (set these in Render dashboard, NOT here)
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3001"
+    # Optional: run migration on first deploy (server does it on boot, but this is explicit)
+    # preDeployCommand: npm run db:migrate --workspace server
+
+# PostgreSQL is external (Neon free tier) — not managed by Render
+# If you want Render-managed Postgres instead, add:
+# databases:
+#   - name: inventario-db
+#     plan: free
+# And then use the internal connection string as DATABASE_URL

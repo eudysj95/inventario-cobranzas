@@ -143,6 +143,26 @@ CREATE INDEX IF NOT EXISTS payment_allocations_debt_idx
   ON payment_allocations (debt_id);
 
 -- ---------------------------------------------------------------------------
+-- cash-sales — individual line items of a cash sale, grouped by a shared
+-- sale_id (no separate header table, like customer_debts for credit sales).
+--   * units decremented from products.quantity in the create TXN.
+--   * grouped by sale_id so one sale can have multiple product lines.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS cash_sales (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id UUID NOT NULL REFERENCES customers (id),
+  product_id  UUID NOT NULL REFERENCES products (id),
+  sale_id     UUID NOT NULL,                 -- grouping key for the cash sale
+  units       INTEGER     NOT NULL CHECK (units > 0),
+  amount      NUMERIC(12,2) NOT NULL CHECK (amount > 0),   -- line total
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS cash_sales_customer_idx ON cash_sales (customer_id);
+CREATE INDEX IF NOT EXISTS cash_sales_product_idx  ON cash_sales (product_id);
+CREATE INDEX IF NOT EXISTS cash_sales_sale_idx     ON cash_sales (sale_id);
+
+-- ---------------------------------------------------------------------------
 -- suppliers — auto-upserted by name (unique) when a supplier debt is created.
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS suppliers (
@@ -197,16 +217,19 @@ CREATE TABLE IF NOT EXISTS admins (
 
 -- ============================================================================
 -- product_states — derived per-unit state breakdown (approved amendment A).
+-- Updated S1: added cash-sales contribution to sold_units and total_units.
 --
 -- Columns
 --   apartado_units  units currently reserved by PENDING apartados
 --   credit_units    units currently held by OPEN credit debts
 --   sold_units      lifetime sold: PAID apartado units + CLOSED debt units
---                   (derived from record lifecycles; there is no stored total)
+--                   + cash-sale units (new in S1)
 --   available_units units currently free in stock
 --   total_units     available + apartado + credit + sold (display helper)
 --   state           dominant display state, precedence
 --                   apartado > credit > available > sold
+--                   (unchanged — cash units only feed 'sold' fallback when
+--                    quantity = 0, so products.js filter set remains valid)
 --
 -- NOTE on available_units: products.quantity ALREADY excludes reserved and
 -- on-credit units (they are decremented atomically in the same TXN that
@@ -228,7 +251,11 @@ SELECT
   p.updated_at,
   COALESCE(ap.pending_units, 0)::int AS apartado_units,
   COALESCE(cd.open_units, 0)::int    AS credit_units,
-  (COALESCE(ap.paid_units, 0) + COALESCE(cd.closed_units, 0))::int AS sold_units,
+  (
+    COALESCE(ap.paid_units, 0)
+    + COALESCE(cd.closed_units, 0)
+    + COALESCE(cs.units, 0)
+  )::int                              AS sold_units,
   p.quantity                          AS available_units,
   (
     p.quantity
@@ -236,6 +263,7 @@ SELECT
     + COALESCE(cd.open_units, 0)
     + COALESCE(ap.paid_units, 0)
     + COALESCE(cd.closed_units, 0)
+    + COALESCE(cs.units, 0)
   )::int                              AS total_units,
   CASE
     WHEN COALESCE(ap.pending_units, 0) > 0 THEN 'apartado'
@@ -257,4 +285,9 @@ LEFT JOIN (
          SUM(units) FILTER (WHERE status = 'closed') AS closed_units
   FROM customer_debts
   GROUP BY product_id
-) cd ON cd.product_id = p.id;
+) cd ON cd.product_id = p.id
+LEFT JOIN (
+  SELECT product_id, SUM(units) AS units
+  FROM cash_sales
+  GROUP BY product_id
+) cs ON cs.product_id = p.id;

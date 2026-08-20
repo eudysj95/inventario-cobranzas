@@ -359,7 +359,7 @@ test(
     assert.equal(paymentsRes.status, 409);
     assert.equal(
       paymentsRes.body.error,
-      'Cannot delete a customer with payment or sales history'
+      'Cannot delete customer with cash-sales history'
     );
 
     // Unknown id -> 404.

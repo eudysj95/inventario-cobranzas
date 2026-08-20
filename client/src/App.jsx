@@ -28,6 +28,7 @@ import CreditSalesPage from './features/credit/CreditSalesPage.jsx';
 import PaymentsPanel from './features/credit/PaymentsPanel.jsx';
 import CollectionsPage from './features/collections/CollectionsPage.jsx';
 import SuppliersPage from './features/suppliers/SuppliersPage.jsx';
+import CustomersPage from './features/customers/CustomersPage.jsx';
 
 function AppShell() {
   const { data, isError } = useConfig();
@@ -55,8 +56,10 @@ function AppShell() {
         )}
         <nav>
           <NavLink to="/inventory">Inventario</NavLink>
+          <NavLink to="/clientes">Clientes</NavLink>
           <NavLink to="/apartados">Apartados</NavLink>
           <NavLink to="/credit-sales">Venta a crédito</NavLink>
+          <NavLink to="/venta">Venta</NavLink>
           <NavLink to="/cobros">Cobranzas</NavLink>
           <NavLink to="/payments">Pagos</NavLink>
           <NavLink to="/proveedores">Proveedores</NavLink>
@@ -90,8 +93,10 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route index element={<Navigate to="/inventory" replace />} />
           <Route path="inventory" element={<InventoryPage />} />
+          <Route path="clientes" element={<CustomersPage />} />
           <Route path="apartados" element={<ApartadosPage />} />
           <Route path="credit-sales" element={<CreditSalesPage />} />
+          <Route path="venta" element={<CashSalesPage />} />
           <Route path="cobros" element={<CollectionsPage />} />
           <Route path="payments" element={<PaymentsPanel />} />
           <Route path="proveedores" element={<SuppliersPage />} />

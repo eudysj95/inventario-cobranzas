@@ -47,6 +47,27 @@ npm run dev:server   # API on :3001 with reload
 npm run dev:client   # Vite dev server on :5173
 ```
 
+## One‑off Neon setup (manual, documented)
+
+If you need to reset the database on Neon (e.g. after development cycles), run these steps **once**:
+
+```bash
+# 1. Backup before clearing
+pg_dump $DATABASE_URL > backup.sql
+
+# 2. Truncate all data tables (keep admins and schema objects)
+psql $DATABASE_URL -c "
+  TRUNCATE payment_allocations, payments, apartado_payments, apartados,
+           customer_debts, supplier_payments, supplier_debts, suppliers,
+           cash_sales, customers, products CASCADE;
+"
+
+# 3. Run migrations and seed against DATABASE_URL dev
+npm run db:migrate && npm run db:seed
+```
+
+**Note**: This is a manual step documented for admin convenience — not code executed automatically.
+
 ## Tests
 
 ```bash

@@ -231,7 +231,7 @@ export default function customersRouter(pool) {
       case 'has-history':
         return conflict(
           res,
-          'Cannot delete a customer with payment or sales history'
+          'Cannot delete customer with cash-sales history'
         );
       default:
         return res.status(200).json({ ok: true });
