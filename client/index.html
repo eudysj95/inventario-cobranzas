@@ -7,16 +7,6 @@
   </head>
   <body>
     <div id="root"></div>
-    <script>
-      // Inline test - runs before module script
-      document.body.style.background = '#fff';
-      const testDiv = document.createElement('div');
-      testDiv.style.cssText = 'position:fixed;top:0;left:0;right:0;height:50px;background:blue;color:white;z-index:99999;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:bold;';
-      testDiv.textContent = '✅ Inline JS ejecutándose';
-      document.body.appendChild(testDiv);
-      console.log('Inline script running');
-      alert('✅ Inline script ejecutándose');
-    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

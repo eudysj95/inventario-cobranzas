@@ -16,7 +16,7 @@
 // current page (task 6.3), the index and catch-all redirect to it. UI copy in
 // neutral Spanish (design: "UI labels in neutral Spanish").
 
-import { useEffect, Component } from 'react';
+import { useEffect } from 'react';
 import { NavLink, Navigate, Outlet, Route, Routes, useNavigate } from 'react-router-dom';
 import { DEFAULT_CONFIG, useConfig } from './api/config.js';
 import { useAuthActions } from './api/auth.js';
@@ -30,59 +30,6 @@ import PaymentsPanel from './features/credit/PaymentsPanel.jsx';
 import CollectionsPage from './features/collections/CollectionsPage.jsx';
 import SuppliersPage from './features/suppliers/SuppliersPage.jsx';
 import CustomersPage from './features/customers/CustomersPage.jsx';
-
-// Error Boundary para capturar errores de render y mostrarlos (debug producción)
-class ErrorBoundary extends Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null, errorInfo: null };
-  }
-
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error, errorInfo) {
-    this.setState({ error, errorInfo });
-    console.error('ErrorBoundary caught:', error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div style={{ padding: '20px', color: 'red', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
-          <h2>Error de la aplicación</h2>
-          <p><strong>Error:</strong> {this.state.error?.message || this.state.error}</p>
-          <p><strong>Stack:</strong></p>
-          <pre>{this.state.errorInfo?.componentStack || 'No stack available'}</pre>
-          <button onClick={() => this.setState({ hasError: false, error: null, errorInfo: null })}>
-            Reintentar
-          </button>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
-// Debug component to verify React is rendering
-function DebugRoot() {
-  console.log('DebugRoot rendering...');
-  // Force visible output
-  if (typeof window !== 'undefined') {
-    document.body.style.background = '#e8f5e9';
-    const debugDiv = document.createElement('div');
-    debugDiv.style.cssText = 'position:fixed;top:10px;left:10px;z-index:9999;padding:20px;background:green;color:white;font-size:20px;border:3px solid white;';
-    debugDiv.textContent = '✅ DebugRoot: React está renderizando en el navegador';
-    document.body.appendChild(debugDiv);
-  }
-  return (
-    <div style={{ padding: '20px', border: '2px solid green', background: '#e8f5e9', minHeight: '100px' }}>
-      <h2>✅ React está renderizando correctamente</h2>
-      <p>Si ves esto, React funciona. El problema está en los componentes hijos.</p>
-    </div>
-  );
-}
 
 function AppShell() {
   const { data, isError } = useConfig();
@@ -140,28 +87,23 @@ export default function App() {
     document.title = config.businessName;
   }, [config.businessName]);
 
-  console.log('App rendering with config:', config);
-
   return (
-    <ErrorBoundary>
-      <DebugRoot />
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route element={<RequireAuth />}>
-          <Route element={<AppShell />}>
-            <Route index element={<Navigate to="/inventory" replace />} />
-            <Route path="inventory" element={<InventoryPage />} />
-            <Route path="clientes" element={<CustomersPage />} />
-            <Route path="apartados" element={<ApartadosPage />} />
-            <Route path="credit-sales" element={<CreditSalesPage />} />
-            <Route path="venta" element={<CashSalesPage />} />
-            <Route path="cobros" element={<CollectionsPage />} />
-            <Route path="payments" element={<PaymentsPanel />} />
-            <Route path="proveedores" element={<SuppliersPage />} />
-            <Route path="*" element={<Navigate to="/inventory" replace />} />
-          </Route>
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route element={<RequireAuth />}>
+        <Route element={<AppShell />}>
+          <Route index element={<Navigate to="/inventory" replace />} />
+          <Route path="inventory" element={<InventoryPage />} />
+          <Route path="clientes" element={<CustomersPage />} />
+          <Route path="apartados" element={<ApartadosPage />} />
+          <Route path="credit-sales" element={<CreditSalesPage />} />
+          <Route path="venta" element={<CashSalesPage />} />
+          <Route path="cobros" element={<CollectionsPage />} />
+          <Route path="payments" element={<PaymentsPanel />} />
+          <Route path="proveedores" element={<SuppliersPage />} />
+          <Route path="*" element={<Navigate to="/inventory" replace />} />
         </Route>
-      </Routes>
-    </ErrorBoundary>
+      </Route>
+    </Routes>
   );
 }
