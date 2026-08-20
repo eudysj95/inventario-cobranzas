@@ -16,9 +16,9 @@ services:
     runtime: node
     plan: free
     # Build: install deps (root + workspaces) + build client (Vite → client/dist)
-    # Render clones to /opt/render/project/src — install root, then cd client && build with hoisted vite binary
-    # Run from client/ with explicit path to root node_modules/vite to fix .vite-temp ES module resolution
-    buildCommand: npm ci && cd client && node ../node_modules/vite/bin/vite.js build
+    # Render clones to /opt/render/project/src — install root, then cd client && build with VITE_CACHE_DIR
+    # Force Vite cache into client/.vite-cache so .vite-temp resolves vite from root node_modules
+    buildCommand: npm ci && cd client && VITE_CACHE_DIR=.vite-cache node ../node_modules/vite/bin/vite.js build
     # Start: run Express server (serves API + SPA from client/dist)
     startCommand: npm run start --workspace server
     # Health check endpoint (no auth, hits /health)
