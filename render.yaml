@@ -16,8 +16,8 @@ services:
     runtime: node
     plan: free
     # Build: install deps (root + workspaces) + build client (Vite → client/dist)
-    # Install all workspace deps (including client devDependencies) from root, then build
-    buildCommand: npm ci --workspaces --include-workspace-root && npx --workspace client vite build
+    # Render clones to /opt/render/project/src — install root, then cd client && install && build
+    buildCommand: npm ci && cd client && npm ci && npx vite build
     # Start: run Express server (serves API + SPA from client/dist)
     startCommand: npm run start --workspace server
     # Health check endpoint (no auth, hits /health)
