@@ -16,7 +16,7 @@
     "test": "npm run test --workspace server",
     "build": "npm run build --workspace client"
   },
-  "devDependencies": {
+  "dependencies": {
     "vite": "^6.0.7",
     "@vitejs/plugin-react": "^4.3.4"
   },
