@@ -10,7 +10,7 @@ import { useState } from 'react';
 import { useCustomers } from '../../api/customers.js';
 import { useProducts } from '../../api/products.js';
 import { useQueryClient } from '@tanstack/react-query';
-import CustomerSelect from '../../features/customer/CustomerSelect.js';
+import CustomerSelect from '../../features/customer/CustomerSelect.jsx';
 import { formatCurrency } from '../../lib/format.js';
 
 const EMPTY_LINE = { productId: '', units: '', price: '' };

@@ -25,6 +25,7 @@ import LoginPage from './features/auth/LoginPage.jsx';
 import InventoryPage from './features/inventory/InventoryPage.jsx';
 import ApartadosPage from './features/apartados/ApartadosPage.jsx';
 import CreditSalesPage from './features/credit/CreditSalesPage.jsx';
+import CashSalesPage from './features/credit/CashSalesPage.jsx';
 import PaymentsPanel from './features/credit/PaymentsPanel.jsx';
 import CollectionsPage from './features/collections/CollectionsPage.jsx';
 import SuppliersPage from './features/suppliers/SuppliersPage.jsx';
