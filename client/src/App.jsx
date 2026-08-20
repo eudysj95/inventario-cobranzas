@@ -16,7 +16,7 @@
 // current page (task 6.3), the index and catch-all redirect to it. UI copy in
 // neutral Spanish (design: "UI labels in neutral Spanish").
 
-import { useEffect } from 'react';
+import { useEffect, Component } from 'react';
 import { NavLink, Navigate, Outlet, Route, Routes, useNavigate } from 'react-router-dom';
 import { DEFAULT_CONFIG, useConfig } from './api/config.js';
 import { useAuthActions } from './api/auth.js';
@@ -29,6 +29,40 @@ import PaymentsPanel from './features/credit/PaymentsPanel.jsx';
 import CollectionsPage from './features/collections/CollectionsPage.jsx';
 import SuppliersPage from './features/suppliers/SuppliersPage.jsx';
 import CustomersPage from './features/customers/CustomersPage.jsx';
+
+// Error Boundary para capturar errores de render y mostrarlos (debug producción)
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, errorInfo: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    this.setState({ error, errorInfo });
+    console.error('ErrorBoundary caught:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '20px', color: 'red', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+          <h2>Error de la aplicación</h2>
+          <p><strong>Error:</strong> {this.state.error?.message || this.state.error}</p>
+          <p><strong>Stack:</strong></p>
+          <pre>{this.state.errorInfo?.componentStack || 'No stack available'}</pre>
+          <button onClick={() => this.setState({ hasError: false, error: null, errorInfo: null })}>
+            Reintentar
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function AppShell() {
   const { data, isError } = useConfig();
@@ -87,22 +121,24 @@ export default function App() {
   }, [config.businessName]);
 
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route element={<RequireAuth />}>
-        <Route element={<AppShell />}>
-          <Route index element={<Navigate to="/inventory" replace />} />
-          <Route path="inventory" element={<InventoryPage />} />
-          <Route path="clientes" element={<CustomersPage />} />
-          <Route path="apartados" element={<ApartadosPage />} />
-          <Route path="credit-sales" element={<CreditSalesPage />} />
-          <Route path="venta" element={<CashSalesPage />} />
-          <Route path="cobros" element={<CollectionsPage />} />
-          <Route path="payments" element={<PaymentsPanel />} />
-          <Route path="proveedores" element={<SuppliersPage />} />
-          <Route path="*" element={<Navigate to="/inventory" replace />} />
+    <ErrorBoundary>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route element={<RequireAuth />}>
+          <Route element={<AppShell />}>
+            <Route index element={<Navigate to="/inventory" replace />} />
+            <Route path="inventory" element={<InventoryPage />} />
+            <Route path="clientes" element={<CustomersPage />} />
+            <Route path="apartados" element={<ApartadosPage />} />
+            <Route path="credit-sales" element={<CreditSalesPage />} />
+            <Route path="venta" element={<CashSalesPage />} />
+            <Route path="cobros" element={<CollectionsPage />} />
+            <Route path="payments" element={<PaymentsPanel />} />
+            <Route path="proveedores" element={<SuppliersPage />} />
+            <Route path="*" element={<Navigate to="/inventory" replace />} />
+          </Route>
         </Route>
-      </Route>
-    </Routes>
+      </Routes>
+    </ErrorBoundary>
   );
 }
