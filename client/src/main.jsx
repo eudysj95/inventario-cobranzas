@@ -11,6 +11,11 @@ testDiv.style.cssText = 'position:fixed;top:0;left:0;right:0;height:50px;backgro
 testDiv.textContent = '✅ JavaScript ejecutándose - main.jsx cargado';
 document.body.appendChild(testDiv);
 
+// Also show alert to verify execution
+setTimeout(() => {
+  alert('✅ main.jsx ejecutándose en el navegador');
+}, 100);
+
 // Global error handlers to catch any unhandled errors
 window.addEventListener('error', (event) => {
   console.error('Global error:', event.error);
