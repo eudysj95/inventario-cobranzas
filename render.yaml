@@ -16,9 +16,9 @@ services:
     runtime: node
     plan: free
     # Build: install deps (root + workspaces) + build client (Vite → client/dist)
-    # Render clones to /opt/render/project/src — install root, then cd client && install vite & plugin-react locally with --prefix . && build
-    # Local deps in client/node_modules fixes ES module import resolution in .vite-temp
-    buildCommand: npm ci && cd client && npm ci && npm install --prefix . vite @vitejs/plugin-react --save-dev && node node_modules/vite/bin/vite.js build
+    # Render clones to /opt/render/project/src — install root (hoists vite & plugin-react), then cd client && build
+    # Root devDependencies ensure .vite-temp in root node_modules can resolve vite & plugin-react via ES modules
+    buildCommand: npm ci && cd client && node ../node_modules/vite/bin/vite.js build
     # Start: run Express server (serves API + SPA from client/dist)
     startCommand: npm run start --workspace server
     # Health check endpoint (no auth, hits /health)
