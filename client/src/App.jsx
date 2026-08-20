@@ -67,8 +67,16 @@ class ErrorBoundary extends Component {
 // Debug component to verify React is rendering
 function DebugRoot() {
   console.log('DebugRoot rendering...');
+  // Force visible output
+  if (typeof window !== 'undefined') {
+    document.body.style.background = '#e8f5e9';
+    const debugDiv = document.createElement('div');
+    debugDiv.style.cssText = 'position:fixed;top:10px;left:10px;z-index:9999;padding:20px;background:green;color:white;font-size:20px;border:3px solid white;';
+    debugDiv.textContent = '✅ DebugRoot: React está renderizando en el navegador';
+    document.body.appendChild(debugDiv);
+  }
   return (
-    <div style={{ padding: '20px', border: '2px solid green', background: '#e8f5e9' }}>
+    <div style={{ padding: '20px', border: '2px solid green', background: '#e8f5e9', minHeight: '100px' }}>
       <h2>✅ React está renderizando correctamente</h2>
       <p>Si ves esto, React funciona. El problema está en los componentes hijos.</p>
     </div>
