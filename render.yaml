@@ -16,7 +16,8 @@ services:
     runtime: node
     plan: free
     # Build: install deps (root + workspaces) + build client (Vite → client/dist)
-    buildCommand: npm ci && npm run build
+    # Use npx to ensure vite binary is found in workspace context
+    buildCommand: npm ci && npx --workspace client vite build
     # Start: run Express server (serves API + SPA from client/dist)
     startCommand: npm run start --workspace server
     # Health check endpoint (no auth, hits /health)
