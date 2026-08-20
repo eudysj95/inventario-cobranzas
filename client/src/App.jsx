@@ -64,6 +64,17 @@ class ErrorBoundary extends Component {
   }
 }
 
+// Debug component to verify React is rendering
+function DebugRoot() {
+  console.log('DebugRoot rendering...');
+  return (
+    <div style={{ padding: '20px', border: '2px solid green', background: '#e8f5e9' }}>
+      <h2>✅ React está renderizando correctamente</h2>
+      <p>Si ves esto, React funciona. El problema está en los componentes hijos.</p>
+    </div>
+  );
+}
+
 function AppShell() {
   const { data, isError } = useConfig();
   const config = data ?? DEFAULT_CONFIG;
@@ -120,8 +131,11 @@ export default function App() {
     document.title = config.businessName;
   }, [config.businessName]);
 
+  console.log('App rendering with config:', config);
+
   return (
     <ErrorBoundary>
+      <DebugRoot />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route element={<RequireAuth />}>
