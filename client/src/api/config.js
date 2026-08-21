@@ -14,7 +14,7 @@ import { useQuery } from '@tanstack/react-query';
 // (server/src/routes/config.js). Used ONLY while the boot fetch is pending
 // or failed — branding comes from the server whenever it is reachable.
 export const DEFAULT_CONFIG = {
-  businessName: 'Mi Negocio',
+  businessName: 'Nexo',
   currencySymbol: '$',
   currencyLocale: 'es-AR',
 };

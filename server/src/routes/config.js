@@ -20,7 +20,7 @@ import { Router } from 'express';
  *   INSTANCE_WHATSAPP_NUMBER  optional — the key is omitted when unset
  */
 const DEFAULTS = {
-  businessName: 'Mi Negocio',
+  businessName: 'Nexo',
   currencySymbol: '$',
   currencyLocale: 'es-AR',
 };

@@ -1,8 +1,6 @@
-// Login page (task 6.2): single shared admin (no roles). Branding comes from
-// config businessName (never hardcoded — amended task text). The failure
-// message is GENERIC (spec: "login fails with a generic error") — server and
-// client both refuse to leak which credential was wrong. An already-authenticated
-// visitor is redirected home.
+// Login page — Nexo design system.
+// Branding from /api/config (tenant-aware). Generic error per spec.
+// Already-authenticated users redirected to home.
 
 import { useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
@@ -12,6 +10,8 @@ import {
   useAuthActions,
   useCurrentUser,
 } from '../../api/auth.js';
+import '../../styles/design-tokens.css';
+import '../../styles/utilities.css';
 
 export default function LoginPage() {
   const { data: configData } = useConfig();
@@ -26,7 +26,7 @@ export default function LoginPage() {
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Already authenticated (e.g. opened /login with a live session): home.
+  // Already authenticated → home
   if (status === 'success' && user) {
     return <Navigate to="/" replace />;
   }
@@ -47,44 +47,96 @@ export default function LoginPage() {
   }
 
   return (
-    <div>
-      <header>
-        <h1>{config.businessName}</h1>
-      </header>
-      <h2>Iniciar sesión</h2>
-      {error && <p role="alert">{error}</p>}
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label htmlFor="username">Usuario</label>
-          <input
-            id="username"
-            name="username"
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-            autoComplete="username"
-            autoFocus
-            required
-            disabled={submitting}
-          />
+    <div className="login-page">
+      <a href="#main-content" className="skip-link">
+        Saltar al contenido principal
+      </a>
+
+      <main id="main-content" className="login-main" role="main">
+        <div className="login-card card">
+          <div className="login-header">
+            <div className="login-brand" aria-label={config.businessName}>
+              <svg className="login-logo" viewBox="0 0 32 32" fill="none" aria-hidden="true" width="48" height="48">
+                <rect width="32" height="32" rx="8" fill="currentColor"/>
+                <path d="M8 16L14 22L24 10" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span className="login-brand-name">{config.businessName}</span>
+            </div>
+          </div>
+
+          <h1 className="login-title">Iniciar sesión</h1>
+          <p className="login-subtitle">Ingresá tus credenciales para acceder al sistema</p>
+
+          {error && (
+            <div className="alert alert-error" role="alert" aria-live="assertive">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <span>{error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="login-form" noValidate>
+            <div className="form-row">
+              <label htmlFor="username" className="label">
+                Usuario
+              </label>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                autoComplete="username"
+                autoFocus
+                required
+                disabled={submitting}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="input"
+                placeholder="admin"
+                aria-describedby={error ? 'login-error' : undefined}
+              />
+            </div>
+
+            <div className="form-row">
+              <label htmlFor="password" className="label">
+                Contraseña
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                disabled={submitting}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input"
+                placeholder="••••••••"
+                aria-describedby={error ? 'login-error' : undefined}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={submitting || !username || !password}
+              className="btn btn-primary btn-lg w-full"
+            >
+              {submitting ? (
+                <>
+                  <span className="spinner" aria-hidden="true"></span>
+                  Ingresando…
+                </>
+              ) : (
+                'Ingresar'
+              )}
+            </button>
+          </form>
+
+          <p className="login-footer">Sistema de inventario y cobranzas</p>
         </div>
-        <div>
-          <label htmlFor="password">Contraseña</label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            autoComplete="current-password"
-            required
-            disabled={submitting}
-          />
-        </div>
-        <button type="submit" disabled={submitting || !username || !password}>
-          {submitting ? 'Ingresando…' : 'Ingresar'}
-        </button>
-      </form>
-      <p>Sistema de inventario y cobranzas</p>
+      </main>
     </div>
   );
 }
