@@ -11,6 +11,9 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from './client.js';
+import { PRODUCTS_KEY } from './products.js';
+import { CUSTOMERS_KEY } from './customers.js';
+import { COLLECTIONS_KEY } from './collections.js';
 
 export const CASH_SALES_KEY = ['cash-sales'];
 
