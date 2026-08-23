@@ -6,7 +6,7 @@
 // - On success: refetches useCustomers(''), preselecciona el nuevo cliente creado
 // Nexo design system: combobox, overlay, buttons via utilities.
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useCustomers, createCustomer } from '../../api/customers.js';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -31,6 +31,8 @@ export default function CustomerSelect({
   const [overlayOpen, setOverlayOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const comboboxRef = useRef(null);
+  const listboxRef = useRef(null);
+  const isMouseOverList = useRef(false);
 
   // Sync with initialCustomerId prop changes
   useEffect(() => {
@@ -40,7 +42,7 @@ export default function CustomerSelect({
     }
   }, [initialCustomerId]);
 
-  // Close dropdown on outside click
+  // Close dropdown on outside click (but not when clicking inside listbox)
   useEffect(() => {
     function handleClickOutside(event) {
       if (comboboxRef.current && !comboboxRef.current.contains(event.target)) {
@@ -100,8 +102,25 @@ export default function CustomerSelect({
   }
 
   function handleBlur() {
-    // Delay to allow click on option to register
-    setTimeout(() => setIsOpen(false), 150);
+    // Don't close if mouse is over the listbox (click will handle selection)
+    if (isMouseOverList.current) return;
+    setTimeout(() => {
+      if (!isMouseOverList.current) setIsOpen(false);
+    }, 100);
+  }
+
+  function handleListMouseDown(event) {
+    // Prevent input blur from firing before this
+    event.preventDefault();
+  }
+
+  function handleOptionMouseDown(customerId) {
+    // Use mousedown (fires before input blur) to select
+    handleSelectCustomer(customerId);
+  }
+
+  function handleOptionMouseEnter(index) {
+    setHighlightedIndex(index);
   }
 
   const handleSaveNewCustomer = async () => {
@@ -151,6 +170,10 @@ export default function CustomerSelect({
             <ul
               id="customer-listbox"
               role="listbox"
+              ref={listboxRef}
+              onMouseDown={handleListMouseDown}
+              onMouseEnter={() => { isMouseOverList.current = true; }}
+              onMouseLeave={() => { isMouseOverList.current = false; }}
               className="absolute z-dropdown w-full mt-1 max-h-60 overflow-auto"
               style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-md)' }}
             >
@@ -159,8 +182,8 @@ export default function CustomerSelect({
                   key={customer.id}
                   role="option"
                   aria-selected={index === highlightedIndex}
-                  onClick={() => handleSelectCustomer(customer.id)}
-                  onMouseEnter={() => setHighlightedIndex(index)}
+                  onMouseDown={() => handleOptionMouseDown(customer.id)}
+                  onMouseEnter={() => handleOptionMouseEnter(index)}
                   className={`px-3 py-2 cursor-pointer ${index === highlightedIndex ? 'bg-primary-light text-primary' : ''} ${customerId === customer.id ? 'font-semibold' : ''}`}
                   style={{ fontSize: 'var(--text-sm)' }}
                 >
