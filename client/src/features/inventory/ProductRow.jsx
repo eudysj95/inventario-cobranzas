@@ -1,46 +1,62 @@
-// One inventory table row (task 6.3). Shows name, the per-unit state chip group
-// with counts (amendment A: A red, C green, Disp blue, S gray — not a single
-// dominant badge), price, last update, and edit/delete actions. Pure
-// presentation: data and callbacks come from InventoryTable/InventoryPage.
-//
-// NOTE: updated_at is a full TIMESTAMPTZ string ('2026-08-11T21:18:35.000Z'),
-// NOT a date-only value — formatDate needs a Date instance for those
-// (format.ts parseDate only splits 'YYYY-MM-DD').
+// One inventory table row — Nexo design system.
+// Shows name, per-unit state chip group with counts, price, last update, edit/delete actions.
 
 import { formatCurrency, formatDate } from '../../lib/format.js';
 import { buildStateChips } from './stateChips.js';
+
+const STATE_CHIP_MAP = {
+  apartado: 'danger',    // red
+  credit: 'success',     // green
+  available: 'info',     // blue
+  sold: 'neutral',       // gray
+};
 
 export default function ProductRow({ product, config, onEdit, onDelete }) {
   const chips = buildStateChips(product);
 
   return (
     <tr>
-      <td>{product.name}</td>
       <td>
-        <span className="chips">
+        <div style={{ fontWeight: 'var(--font-weight-medium)' }}>{product.name}</div>
+      </td>
+      <td>
+        <div className="chips" style={{ gap: 'var(--space-2)', flexWrap: 'wrap' }}>
           {chips.map((chip) => (
             <span
               key={chip.state}
-              className={`chip chip--${chip.color}`}
+              className={`chip chip-${STATE_CHIP_MAP[chip.state] || 'neutral'}`}
               title={`${chip.label}: ${chip.count} unidades`}
+              style={{ fontSize: 'var(--text-xs)', padding: 'var(--space-1) var(--space-2)' }}
             >
               {chip.key} {chip.count}
             </span>
           ))}
-          <span className="chips-total" title={`${product.total_units} unidades en total`}>
+          <span className="chips-total" style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)' }} title={`${product.total_units} unidades en total`}>
             Total {product.total_units}
           </span>
-        </span>
+        </div>
       </td>
       <td>{formatCurrency(product.price, config)}</td>
-      <td>{formatDate(new Date(product.updated_at), config)}</td>
+      <td style={{ whiteSpace: 'nowrap' }}>{formatDate(new Date(product.updated_at), config)}</td>
       <td>
-        <button type="button" onClick={() => onEdit(product)}>
-          Editar
-        </button>{' '}
-        <button type="button" onClick={() => onDelete(product)}>
-          Eliminar
-        </button>
+        <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => onEdit(product)}
+            className="btn btn-secondary btn-sm"
+            aria-label={`Editar ${product.name}`}
+          >
+            Editar
+          </button>
+          <button
+            type="button"
+            onClick={() => onDelete(product)}
+            className="btn btn-danger btn-sm"
+            aria-label={`Eliminar ${product.name}`}
+          >
+            Eliminar
+          </button>
+        </div>
       </td>
     </tr>
   );

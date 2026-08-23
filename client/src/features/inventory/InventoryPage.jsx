@@ -1,15 +1,12 @@
-// Inventory page (task 6.3). React Query drives the product list (useProducts)
-// with search + state filters; every mutation invalidates the cache so the
-// table refetches. Create/edit go through ProductForm, delete asks for
-// confirmation and surfaces the server's 409 guard messages. UI copy in
-// neutral Spanish (design: "UI labels in neutral Spanish").
+// Inventory page — Nexo design system.
+// React Query drives the product list with search + state filters.
+// Create/edit via ProductForm modal, delete with confirmation.
 
 import { useState } from 'react';
 import { DEFAULT_CONFIG, useConfig } from '../../api/config.js';
 import { useProductMutations, useProducts } from '../../api/products.js';
 import InventoryTable from './InventoryTable.jsx';
 import ProductForm from './ProductForm.jsx';
-import './inventory.css';
 
 const PRODUCT_STATES = [
   ['', 'Todos los estados'],
@@ -26,7 +23,7 @@ export default function InventoryPage() {
 
   const [searchInput, setSearchInput] = useState('');
   const [filters, setFilters] = useState({ search: '', state: '' });
-  const [form, setForm] = useState(null); // {mode:'create'} | {mode:'edit', product}
+  const [form, setForm] = useState(null);
   const [bannerError, setBannerError] = useState(null);
   const [busy, setBusy] = useState(false);
 
@@ -60,8 +57,6 @@ export default function InventoryPage() {
     if (payload.mode === 'create') {
       await create(payload.body);
     } else if (Object.keys(payload.patch).length > 0) {
-      // Unchanged quantities/fields are deliberately omitted; an empty patch
-      // means "nothing to save" — no API call, just close.
       await update(payload.id, payload.patch);
     }
     closeForm();
@@ -81,43 +76,104 @@ export default function InventoryPage() {
   }
 
   return (
-    <section className="inventory-page">
-      <header className="inventory-header">
-        <h2>Inventario</h2>
-        <button type="button" onClick={openCreate}>
+    <section className="inventory-page" style={{ padding: 'var(--space-4) 0' }}>
+      <header className="flex items-center justify-between gap-3 mb-4 flex-wrap" style={{ alignItems: 'center' }}>
+        <h2 style={{ margin: 0, fontSize: 'var(--text-2xl)' }}>Inventario</h2>
+        <button type="button" onClick={openCreate} className="btn btn-primary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style={{ marginRight: 'var(--space-1)' }}>
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
           Nuevo producto
         </button>
       </header>
 
-      <form className="inventory-filters" onSubmit={applySearch}>
-        <input
-          type="search"
-          placeholder="Buscar productos…"
-          value={searchInput}
-          onChange={(event) => setSearchInput(event.target.value)}
-        />
-        <button type="submit">Buscar</button>
-        <select value={filters.state} onChange={applyState} aria-label="Filtrar por estado">
-          {PRODUCT_STATES.map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
+      <form onSubmit={applySearch} className="flex flex-wrap gap-3 mb-4" style={{ alignItems: 'flex-end' }}>
+        <div className="form-row" style={{ flex: 1, minWidth: '200px', flexDirection: 'column', gap: 'var(--space-1)' }}>
+          <label htmlFor="inventory-search" className="label">Buscar productos</label>
+          <input
+            id="inventory-search"
+            type="search"
+            placeholder="Buscar productos…"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="input"
+          />
+        </div>
+        <button type="submit" className="btn btn-secondary" style={{ minHeight: 'var(--touch-target)' }}>
+          Buscar
+        </button>
+        <div className="form-row" style={{ flexDirection: 'column', gap: 'var(--space-1)', minWidth: '160px' }}>
+          <label htmlFor="inventory-state" className="label">Filtrar por estado</label>
+          <select
+            id="inventory-state"
+            value={filters.state}
+            onChange={applyState}
+            aria-label="Filtrar por estado"
+            className="input select"
+          >
+            {PRODUCT_STATES.map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
+        </div>
+        {searchInput || filters.state ? (
+          <button type="button" onClick={() => { setSearchInput(''); setFilters({ search: '', state: '' }); }} className="btn btn-ghost btn-sm">
+            Limpiar filtros
+          </button>
+        ) : null}
       </form>
 
       {bannerError && (
-        <p className="banner-error" role="alert">
-          {bannerError}
-        </p>
+        <div className="alert alert-error mb-4" role="alert">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span>{bannerError}</span>
+        </div>
       )}
 
       {isPending ? (
-        <p>Cargando productos…</p>
+        <div className="loading" aria-live="polite">
+          <span className="spinner" aria-hidden="true"></span>
+          <span style={{ marginLeft: 'var(--space-3)' }}>Cargando productos…</span>
+        </div>
       ) : isError ? (
-        <p role="alert">No se pudieron cargar los productos.</p>
+        <div className="alert alert-error" role="alert">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span>No se pudieron cargar los productos.</span>
+        </div>
       ) : products.length === 0 ? (
-        <p>No hay productos que coincidan con los filtros.</p>
+        <div className="empty-state">
+          <div className="empty-state-icon" aria-hidden="true">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style={{ opacity: 0.3 }}>
+              <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+            </svg>
+          </div>
+          <h3 className="empty-state-title">
+            {searchInput || filters.state ? 'No hay productos que coincidan con los filtros.' : 'No hay productos registrados.'}
+          </h3>
+          <p style={{ margin: 0, color: 'var(--color-text-secondary)' }}>
+            {searchInput || filters.state
+              ? 'Probá con otros términos de búsqueda o quitá los filtros.'
+              : 'Creá tu primer producto para empezar.'}
+          </p>
+          {!searchInput && !filters.state && (
+            <button type="button" onClick={openCreate} className="btn btn-primary mt-3">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style={{ marginRight: 'var(--space-1)' }}>
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Crear primer producto
+            </button>
+          )}
+        </div>
       ) : (
         <InventoryTable
           products={products}
@@ -127,10 +183,19 @@ export default function InventoryPage() {
         />
       )}
 
-      {busy && <p aria-live="polite">Procesando…</p>}
+      {busy && (
+        <div className="loading" aria-live="polite" style={{ marginTop: 'var(--space-3)' }}>
+          <span className="spinner" aria-hidden="true"></span>
+          <span style={{ marginLeft: 'var(--space-3)' }}>Procesando…</span>
+        </div>
+      )}
 
       {form && (
-        <ProductForm product={form.product ?? null} onSubmit={handleSubmit} onCancel={closeForm} />
+        <ProductForm
+          product={form.product ?? null}
+          onSubmit={handleSubmit}
+          onCancel={closeForm}
+        />
       )}
     </section>
   );

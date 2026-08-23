@@ -1,16 +1,7 @@
-// Product create/edit form (task 6.3). Modes:
-//   create — `product` prop is null; quantity is the INITIAL stock (absolute).
-//   edit   — `product` is set; the quantity input edits an absolute TARGET and
-//            the form converts it into the SIGNED stock adjustment the PATCH
-//            endpoint expects (quantityAdjustmentBody in api/products.js: the
-//            server ADDS quantity to current stock, it never receives an
-//            absolute value). Only fields that actually changed are sent, so an
-//            untouched form never hits the server's "No fields to update" 400.
-//
-// Server guard messages (400/409, e.g. deleting with stock) surface verbatim
-// via ApiError into the error banner. `onSubmit` returns a Promise and rethrows
-// so the page decides where errors end up; this component renders them too
-// (single source for the user).
+// Product create/edit form — Nexo design system.
+// Modal form using design system utilities.
+// Create: quantity = INITIAL stock (absolute).
+// Edit: quantity = TARGET stock (converts to signed adjustment for PATCH).
 
 import { useState } from 'react';
 import { quantityAdjustmentBody } from '../../api/products.js';
@@ -32,7 +23,6 @@ function buildEditPatch(product, values) {
     patch.description = values.description.trim() || null;
   }
   if (values.price !== product.price) patch.price = values.price;
-  // Signed adjustment — the ONLY way quantity may be sent (slice-3 contract).
   Object.assign(patch, quantityAdjustmentBody(product.quantity, values.quantity));
   return patch;
 }
@@ -64,9 +54,6 @@ export default function ProductForm({ product, onSubmit, onCancel }) {
     const values = {
       name,
       description,
-      // Create mode follows the server defaults (price 0 / quantity 0) when the
-      // fields are left empty; edit mode requires explicit values so a blank
-      // field can never silently zero out a product.
       price: price === '' ? (isEdit ? null : 0) : Number(price),
       quantity: quantity === '' ? (isEdit ? null : 0) : Number(quantity),
     };
@@ -85,94 +72,130 @@ export default function ProductForm({ product, onSubmit, onCancel }) {
     try {
       await onSubmit(payload);
     } catch (err) {
-      // Includes server guard messages (ApiError) and validation failures.
       setError(err instanceof Error ? err.message : 'Ocurrió un error inesperado.');
       setSubmitting(false);
     }
   }
 
   return (
-    <div className="form-overlay" role="dialog" aria-modal="true" aria-label={isEdit ? 'Editar producto' : 'Nuevo producto'}>
-      <form className="product-form" onSubmit={handleSubmit}>
-        <h2>{isEdit ? `Editar producto: ${product.name}` : 'Nuevo producto'}</h2>
-
-        {isEdit && (
-          <p className="form-current-state">
-            Estado actual: <StateBadge product={product} />
-          </p>
-        )}
-
-        {error && (
-          <p className="form-error" role="alert">
-            {error}
-          </p>
-        )}
-
-        <label htmlFor="product-name">
-          Nombre
-          <input
-            id="product-name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            autoFocus
-            required
-            disabled={submitting}
-          />
-        </label>
-
-        <label htmlFor="product-description">
-          Descripción
-          <textarea
-            id="product-description"
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            rows={2}
-            disabled={submitting}
-          />
-        </label>
-
-        <label htmlFor="product-price">
-          Precio
-          <input
-            id="product-price"
-            type="number"
-            min="0"
-            step="0.01"
-            value={price}
-            onChange={(event) => setPrice(event.target.value)}
-            disabled={submitting}
-          />
-        </label>
-
-        <label htmlFor="product-quantity">
-          {isEdit ? 'Stock (cantidad objetivo)' : 'Stock inicial'}
-          <input
-            id="product-quantity"
-            type="number"
-            min="0"
-            step="1"
-            value={quantity}
-            onChange={(event) => setQuantity(event.target.value)}
-            disabled={submitting}
-          />
-        </label>
-
-        {isEdit && (
-          <p className="form-hint">
-            El stock es un ajuste: ingrese un valor mayor al stock actual ({product.quantity}) para
-            reponer unidades, o menor para quitarlas. El stock nunca puede ser menor a cero.
-          </p>
-        )}
-
-        <div className="form-actions">
-          <button type="submit" disabled={submitting}>
-            {submitting ? 'Guardando…' : 'Guardar'}
-          </button>
-          <button type="button" onClick={onCancel} disabled={submitting}>
-            Cancelar
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={isEdit ? 'Editar producto' : 'Nuevo producto'}>
+      <div className="modal" style={{ maxWidth: '32rem' }}>
+        <div className="modal-header">
+          <h2 className="modal-title">{isEdit ? `Editar producto: ${product.name}` : 'Nuevo producto'}</h2>
+          <button type="button" className="modal-close" onClick={onCancel} aria-label="Cerrar" disabled={submitting}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
           </button>
         </div>
-      </form>
+
+        <form onSubmit={handleSubmit} className="modal-body" noValidate>
+          {isEdit && (
+            <div className="form-row" style={{ marginBottom: 'var(--space-3)', padding: 'var(--space-2)', background: 'var(--color-bg)', borderRadius: 'var(--radius-md)' }}>
+              <strong style={{ fontSize: 'var(--text-sm)' }}>Estado actual: </strong>
+              <StateBadge product={product} />
+            </div>
+          )}
+
+          {error && (
+            <div className="alert alert-error" role="alert" style={{ marginBottom: 'var(--space-3)' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <span>{error}</span>
+            </div>
+          )}
+
+          <div className="form-row" style={{ flexDirection: 'column', gap: 'var(--space-3)' }}>
+            <label htmlFor="product-name" className="label">
+              Nombre
+              <input
+                id="product-name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                autoFocus
+                required
+                disabled={submitting}
+                className="input"
+                placeholder="Ej: Remera negra talle M"
+              />
+            </label>
+
+            <label htmlFor="product-description" className="label">
+              Descripción (opcional)
+              <textarea
+                id="product-description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={2}
+                disabled={submitting}
+                className="input textarea"
+                placeholder="Detalles, talles, colores, etc."
+              />
+            </label>
+
+            <div className="form-row" style={{ gap: 'var(--space-3)' }}>
+              <label htmlFor="product-price" className="label" style={{ flex: 1 }}>
+                Precio
+                <input
+                  id="product-price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  disabled={submitting}
+                  className="input"
+                  placeholder="0.00"
+                  required
+                />
+              </label>
+              <label htmlFor="product-quantity" className="label" style={{ flex: 1 }}>
+                {isEdit ? 'Stock (cantidad objetivo)' : 'Stock inicial'}
+                <input
+                  id="product-quantity"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                  disabled={submitting}
+                  className="input"
+                  placeholder="0"
+                  required
+                />
+              </label>
+            </div>
+
+            {isEdit && (
+              <p className="form-hint" style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', margin: 0 }}>
+                El stock es un ajuste: ingrese un valor mayor al stock actual ({product.quantity}) para
+                reponer unidades, o menor para quitarlas. El stock nunca puede ser menor a cero.
+              </p>
+            )}
+          </div>
+        </form>
+
+        <div className="modal-footer">
+          <button type="button" onClick={onCancel} className="btn btn-secondary" disabled={submitting}>
+            Cancelar
+          </button>
+          <button type="submit" form="product-form" className="btn btn-primary" disabled={submitting}>
+            {submitting ? (
+              <>
+                <span className="spinner" style={{ width: '16px', height: '16px', borderWidth: '2px' }} aria-hidden="true"></span>
+                Guardando…
+              </>
+            ) : (
+              'Guardar'
+            )}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

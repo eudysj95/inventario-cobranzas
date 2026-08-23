@@ -1,32 +1,33 @@
-// Inventory table (task 6.3). Maps the product list to rows; filtering and
-// sorting live in InventoryPage, this component only renders. The empty state
-// is handled by the page (a bare table with no rows is unhelpful).
+// Inventory table — Nexo design system.
+// Responsive table with horizontal scroll on mobile, sticky header.
 
 import ProductRow from './ProductRow.jsx';
 
 export default function InventoryTable({ products, config, onEdit, onDelete }) {
   return (
-    <table className="inventory-table">
-      <thead>
-        <tr>
-          <th>Producto</th>
-          <th>Unidades</th>
-          <th>Precio</th>
-          <th>Última actualización</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        {products.map((product) => (
-          <ProductRow
-            key={product.id}
-            product={product}
-            config={config}
-            onEdit={onEdit}
-            onDelete={onDelete}
-          />
-        ))}
-      </tbody>
-    </table>
+    <div className="table-wrap" role="region" aria-label="Lista de productos" tabIndex={0}>
+      <table className="table">
+        <thead>
+          <tr>
+            <th scope="col">Producto</th>
+            <th scope="col">Unidades</th>
+            <th scope="col">Precio</th>
+            <th scope="col">Última actualización</th>
+            <th scope="col">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {products.map((product) => (
+            <ProductRow
+              key={product.id}
+              product={product}
+              config={config}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

@@ -1,9 +1,14 @@
-// Dominant-state badge (task 6.3, design "StateBadge"). The inventory table
-// shows the full per-unit chip group (amendment A); this component renders the
-// SINGLE dominant-state chip computed by dominantState() — used by the product
-// form to summarize the current state while the row shows the whole breakdown.
+// Dominant-state badge — Nexo design system.
+// Single chip for form summary (table shows full chip group via ProductRow).
 
 import { dominantState, STATE_CHIPS } from './stateChips.js';
+
+const STATE_CHIP_MAP = {
+  apartado: 'danger',    // red
+  credit: 'success',     // green
+  available: 'info',     // blue
+  sold: 'neutral',       // gray
+};
 
 export default function StateBadge({ product }) {
   const state = dominantState(product);
@@ -11,7 +16,11 @@ export default function StateBadge({ product }) {
   const count = Number(product[`${state}_units`]) || 0;
 
   return (
-    <span className={`chip chip--${meta.color}`} title={`${meta.label}: ${count} unidades`}>
+    <span
+      className={`chip chip-${STATE_CHIP_MAP[state] || 'neutral'}`}
+      title={`${meta.label}: ${count} unidades`}
+      style={{ fontSize: 'var(--text-xs)' }}
+    >
       {meta.key} {count}
     </span>
   );
