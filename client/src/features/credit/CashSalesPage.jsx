@@ -20,6 +20,7 @@ export default function CashSalesPage() {
   const { data: sale, isPending: isDetailPending, isError: isDetailError } = useCashSaleDetail(null);
   const [createdSaleId, setCreatedSaleId] = useState(null);
   const [submitError, setSubmitError] = useState(null);
+  const [formOpen, setFormOpen] = useState(false);
   const navigate = useNavigate();
 
   async function handleCreate({ customerId, lines }) {
@@ -35,51 +36,55 @@ export default function CashSalesPage() {
     } catch (err) {
       console.error('Cash sale creation failed:', err);
       setSubmitError(err instanceof Error ? err.message : 'Ocurrió un error inesperado.');
-      // NO re-throw: let the form show the error without breaking React hooks
     }
   }
 
-  if (createdSaleId) {
-    return (
-      <section style={{ padding: 'var(--space-4) 0' }}>
-        <header className="flex items-center justify-between gap-3 mb-4 flex-wrap" style={{ alignItems: 'center' }}>
-          <h2 style={{ margin: 0, fontSize: 'var(--text-2xl)' }}>Venta de contado</h2>
-        </header>
-        <CashSaleDetail saleId={createdSaleId} config={config} />
-        <button type="button" onClick={() => setCreatedSaleId(null)} className="btn btn-secondary btn-sm mt-3">
-          Volver a venta
-        </button>
-      </section>
-    );
+  function handleBack() {
+    setCreatedSaleId(null);
+    setFormOpen(false);
+    setSubmitError(null);
   }
 
-  const [formOpen, setFormOpen] = useState(false);
+  const showDetail = Boolean(createdSaleId);
 
   return (
     <section style={{ padding: 'var(--space-4) 0' }}>
       <header className="flex items-center justify-between gap-3 mb-4 flex-wrap" style={{ alignItems: 'center' }}>
         <h2 style={{ margin: 0, fontSize: 'var(--text-2xl)' }}>Venta de contado</h2>
-        <button type="button" onClick={() => setFormOpen(true)} className="btn btn-primary">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" style={{ marginRight: 'var(--space-1)' }}>
-            <line x1="12" y1="5" x2="12" y2="19"/>
-            <line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-          Nueva venta de contado
-        </button>
+        {!showDetail && (
+          <button type="button" onClick={() => setFormOpen(true)} className="btn btn-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" style={{ marginRight: 'var(--space-1)' }}>
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Nueva venta de contado
+          </button>
+        )}
+        {showDetail && (
+          <button type="button" onClick={handleBack} className="btn btn-secondary btn-sm">
+            Volver a venta
+          </button>
+        )}
       </header>
 
-      {submitError && (
-        <p className="alert alert-error" role="alert" style={{ marginBottom: 'var(--space-4)' }}>
-          {submitError}
-        </p>
-      )}
+      {showDetail ? (
+        <CashSaleDetail saleId={createdSaleId} config={config} />
+      ) : (
+        <>
+          {submitError && (
+            <p className="alert alert-error" role="alert" style={{ marginBottom: 'var(--space-4)' }}>
+              {submitError}
+            </p>
+          )}
 
-      {formOpen && (
-        <CashSaleForm onSubmit={handleCreate} onCancel={() => setFormOpen(false)} />
-      )}
+          {formOpen && (
+            <CashSaleForm onSubmit={handleCreate} onCancel={() => setFormOpen(false)} />
+          )}
 
-      {!formOpen && (
-        <p className="empty-state">Seleccione «Nueva venta de contado» para registrar una venta.</p>
+          {!formOpen && (
+            <p className="empty-state">Seleccione «Nueva venta de contado» para registrar una venta.</p>
+          )}
+        </>
       )}
     </section>
   );

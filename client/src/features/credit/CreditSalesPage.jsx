@@ -33,48 +33,54 @@ export default function CreditSalesPage() {
     } catch (err) {
       console.error('Credit sale creation failed:', err);
       setSubmitError(err instanceof Error ? err.message : 'Ocurrió un error inesperado.');
-      // NO re-throw: let the form show the error without breaking React hooks
     }
   }
 
-  if (createdSaleId) {
-    return (
-      <section style={{ padding: 'var(--space-4) 0' }}>
-        <header className="flex items-center justify-between gap-3 mb-4 flex-wrap" style={{ alignItems: 'center' }}>
-          <h2 style={{ margin: 0, fontSize: 'var(--text-2xl)' }}>Venta a crédito</h2>
-        </header>
-        <SaleDetail saleId={createdSaleId} config={config} />
-        <button type="button" onClick={() => setCreatedSaleId(null)} className="btn btn-secondary btn-sm mt-3">
-          Nueva venta
-        </button>
-      </section>
-    );
+  function handleBack() {
+    setCreatedSaleId(null);
+    setFormOpen(false);
+    setSubmitError(null);
   }
+
+  const showDetail = Boolean(createdSaleId);
 
   return (
     <section style={{ padding: 'var(--space-4) 0' }}>
       <header className="flex items-center justify-between gap-3 mb-4 flex-wrap" style={{ alignItems: 'center' }}>
         <h2 style={{ margin: 0, fontSize: 'var(--text-2xl)' }}>Venta a crédito</h2>
-        <button type="button" onClick={() => setFormOpen(true)} className="btn btn-primary">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" style={{ marginRight: 'var(--space-1)' }}>
-            <line x1="12" y1="5" x2="12" y2="19"/>
-            <line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-          Nueva venta a crédito
-        </button>
+        {!showDetail && (
+          <button type="button" onClick={() => setFormOpen(true)} className="btn btn-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" style={{ marginRight: 'var(--space-1)' }}>
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Nueva venta a crédito
+          </button>
+        )}
+        {showDetail && (
+          <button type="button" onClick={handleBack} className="btn btn-secondary btn-sm">
+            Nueva venta
+          </button>
+        )}
       </header>
 
-      {submitError && (
-        <p className="alert alert-error" role="alert" style={{ marginBottom: 'var(--space-4)' }}>
-          {submitError}
-        </p>
-      )}
+      {showDetail ? (
+        <SaleDetail saleId={createdSaleId} config={config} />
+      ) : (
+        <>
+          {submitError && (
+            <p className="alert alert-error" role="alert" style={{ marginBottom: 'var(--space-4)' }}>
+              {submitError}
+            </p>
+          )}
 
-      {formOpen && (
-        <CreditSaleForm onSubmit={handleCreate} onCancel={() => setFormOpen(false)} />
-      )}
+          {formOpen && (
+            <CreditSaleForm onSubmit={handleCreate} onCancel={() => setFormOpen(false)} />
+          )}
 
-      {!formOpen && <p className="empty-state">Seleccione «Nueva venta a crédito» para registrar una venta.</p>}
+          {!formOpen && <p className="empty-state">Seleccione «Nueva venta a crédito» para registrar una venta.</p>}
+        </>
+      )}
     </section>
   );
 }
