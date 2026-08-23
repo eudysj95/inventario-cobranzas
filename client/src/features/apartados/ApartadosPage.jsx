@@ -4,6 +4,7 @@
 // mutation invalidates the apartado list plus products/customers so the
 // inventory chips and balances refetch. Server guard messages surface in the
 // banner/form. UI copy in neutral Spanish.
+// Nexo design system: header, filters, table, modal via utilities.
 
 import { useState } from 'react';
 import { DEFAULT_CONFIG, useConfig } from '../../api/config.js';
@@ -14,7 +15,6 @@ import {
 } from '../../api/apartados.js';
 import ApartadoForm from './ApartadoForm.jsx';
 import ApartadoList from './ApartadoList.jsx';
-import './apartados.css';
 
 const STATUS_FILTERS = [
   ['', 'Todos los estados'],
@@ -42,7 +42,6 @@ export default function ApartadosPage() {
       await create(body);
       setFormOpen(false);
     } catch (err) {
-      // Re-throw so the form shows the server message (e.g. insufficient stock).
       throw err;
     }
   }
@@ -56,7 +55,6 @@ export default function ApartadosPage() {
     try {
       await cancel(apartado.id);
     } catch (err) {
-      // 409 "Only pending apartados can be cancelled" surfaces verbatim.
       setBannerError(err instanceof Error ? err.message : 'Ocurrió un error inesperado.');
     } finally {
       setBusy(false);
@@ -69,27 +67,31 @@ export default function ApartadosPage() {
       await pay(apartado.id, buildApartadoPayBody(amount, note));
       setPayingId(null);
     } catch (err) {
-      // Server overpay/conflict messages surface verbatim in the inline form.
       throw err;
     }
   }
 
   return (
-    <section className="apartados-page">
-      <header className="inventory-header">
-        <h2>Apartados</h2>
-        <button type="button" onClick={() => setFormOpen(true)}>
+    <section style={{ padding: 'var(--space-4) 0' }}>
+      <header className="flex items-center justify-between gap-3 mb-4 flex-wrap" style={{ alignItems: 'center' }}>
+        <h2 style={{ margin: 0, fontSize: 'var(--text-2xl)' }}>Apartados</h2>
+        <button type="button" onClick={() => setFormOpen(true)} className="btn btn-primary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style={{ marginRight: 'var(--space-1)' }}>
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
           Nuevo apartado
         </button>
       </header>
 
-      <div className="apartados-filters">
-        <label htmlFor="apartado-status-filter">
-          Estado
+      <form onSubmit={(e) => e.preventDefault()} className="flex flex-wrap gap-3 mb-4" style={{ alignItems: 'flex-end' }}>
+        <div className="form-row" style={{ flexDirection: 'column', gap: 'var(--space-1)', minWidth: '160px' }}>
+          <label htmlFor="apartado-status-filter" className="label">Estado</label>
           <select
             id="apartado-status-filter"
             value={status}
             onChange={(event) => setStatus(event.target.value)}
+            className="input select"
           >
             {STATUS_FILTERS.map(([value, label]) => (
               <option key={value} value={value}>
@@ -97,21 +99,21 @@ export default function ApartadosPage() {
               </option>
             ))}
           </select>
-        </label>
-      </div>
+        </div>
+      </form>
 
       {bannerError && (
-        <p className="banner-error" role="alert">
+        <p className="alert alert-error" role="alert" style={{ marginBottom: 'var(--space-4)' }}>
           {bannerError}
         </p>
       )}
 
       {isPending ? (
-        <p>Cargando apartados…</p>
+        <p className="loading">Cargando apartados…</p>
       ) : isError ? (
-        <p role="alert">No se pudieron cargar los apartados.</p>
+        <p className="alert alert-error" role="alert">No se pudieron cargar los apartados.</p>
       ) : apartados.length === 0 ? (
-        <p>No hay apartados que coincidan con el filtro.</p>
+        <p className="empty-state">No hay apartados que coincidan con el filtro.</p>
       ) : (
         <ApartadoList
           apartados={apartados}
@@ -127,7 +129,7 @@ export default function ApartadosPage() {
         />
       )}
 
-      {busy && <p aria-live="polite">Procesando…</p>}
+      {busy && <p aria-live="polite" className="loading">Procesando…</p>}
 
       {formOpen && (
         <ApartadoForm

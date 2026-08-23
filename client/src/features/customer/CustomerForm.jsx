@@ -4,9 +4,10 @@
 // On submit: POST /api/customers (create) or PATCH /api/customers/:id (update)
 // refetches useCustomers('') and closes overlay
 // mode "isEditing" for edit mode
+// Nexo design system: modal, form, inputs, buttons via utilities.
 
-import { useState } from 'react';
-import { useCustomers, createCustomer, updateCustomer } from '../../api/customers.js';
+import { useState, useEffect } from 'react';
+import { createCustomer, updateCustomer } from '../../api/customers.js';
 
 const EMPTY_CUSTOMER = { id: '', name: '', phone: '' };
 
@@ -23,11 +24,17 @@ export default function CustomerForm({ onSubmit, onCancel, isEditing, initialCus
   const [customerId, setCustomerId] = useState('');
 
   // If we're editing, pre-fill with existing customer data
-  if (isEditing && initialCustomer) {
-    setName(initialCustomer.name || '');
-    setPhone(initialCustomer.phone || '');
-    setCustomerId(initialCustomer.id || '');
-  }
+  useEffect(() => {
+    if (isEditing && initialCustomer) {
+      setName(initialCustomer.name || '');
+      setPhone(initialCustomer.phone || '');
+      setCustomerId(initialCustomer.id || '');
+    } else {
+      setName('');
+      setPhone('');
+      setCustomerId('');
+    }
+  }, [isEditing, initialCustomer]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -48,10 +55,8 @@ export default function CustomerForm({ onSubmit, onCancel, isEditing, initialCus
       } else {
         await createCustomer(name, phone);
       }
-      // Refetch customers list and close overlay
       onSubmit(values);
     } catch (err) {
-      // Server FK RESTRICT (409) — show verbatim; otherwise generic error
       const message = err instanceof Error ? err.message : 'Ocurrió un error inesperado.';
       setError(message);
     } finally {
@@ -64,55 +69,87 @@ export default function CustomerForm({ onSubmit, onCancel, isEditing, initialCus
   }
 
   return (
-    <div className="form-overlay" role="dialog" aria-modal="true" aria-label={isEditing ? 'Editar cliente' : 'Nuevo cliente'}>
-      <form className="product-form customer-form" onSubmit={handleSubmit}>
-        <h2>{isEditing ? 'Editar cliente' : 'Nuevo cliente'}</h2>
-
-        {error && (
-          <p className="form-error" role="alert">
-            {error}
-          </p>
-        )}
-
-        <label htmlFor="customer-name">
-          Nombre
-          <input
-            id="customer-name"
-            type="text"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            required
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={isEditing ? 'Editar cliente' : 'Nuevo cliente'}>
+      <form id="customer-form" className="modal" onSubmit={handleSubmit}>
+        <div className="modal-header">
+          <h2 className="modal-title">{isEditing ? 'Editar cliente' : 'Nuevo cliente'}</h2>
+          <button
+            type="button"
+            className="modal-close"
+            onClick={onCancel}
             disabled={submitting}
-          />
-        </label>
-
-        <label htmlFor="customer-phone">
-          Teléfono
-          <input
-            id="customer-phone"
-            type="tel"
-            value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            disabled={submitting}
-          />
-          {phone && (
-            <button
-              type="button"
-              onClick={handleClearPhone}
-              className="phone-clear-btn"
-              disabled={submitting}
-            >
-              Limpiar
-            </button>
-          )}
-        </label>
-
-        <div className="form-actions">
-          <button type="submit" disabled={submitting}>
-            {submitting ? 'Guardando…' : isEditing ? 'Actualizar' : 'Crear'}
+            aria-label="Cerrar"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
           </button>
-          <button type="button" onClick={onCancel} disabled={submitting}>
+        </div>
+
+        <div className="modal-body">
+          {error && (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          )}
+
+          <label htmlFor="customer-name" className="label">
+            Nombre
+            <input
+              id="customer-name"
+              type="text"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              required
+              disabled={submitting}
+              className="input"
+              autoFocus
+            />
+          </label>
+
+          <label htmlFor="customer-phone" className="label">
+            Teléfono (opcional)
+            <div className="input-group">
+              <input
+                id="customer-phone"
+                type="tel"
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+                disabled={submitting}
+                className="input"
+                placeholder="Ej: +54 9 11 1234-5678"
+              />
+              {phone && (
+                <button
+                  type="button"
+                  onClick={handleClearPhone}
+                  className="btn btn-secondary btn-sm"
+                  disabled={submitting}
+                  style={{ minHeight: 'var(--touch-target)' }}
+                >
+                  Limpiar
+                </button>
+              )}
+            </div>
+          </label>
+        </div>
+
+        <div className="modal-footer">
+          <button type="button" onClick={onCancel} className="btn btn-secondary" disabled={submitting}>
             Cancelar
+          </button>
+          <button type="submit" className="btn btn-primary" disabled={submitting}>
+            {submitting ? (
+              <>
+                <span className="spinner" style={{ width: '16px', height: '16px', borderWidth: '2px' }} aria-hidden="true"></span>
+                Guardando…
+              </>
+            ) : isEditing ? (
+              'Actualizar'
+            ) : (
+              'Crear'
+            )}
           </button>
         </div>
       </form>

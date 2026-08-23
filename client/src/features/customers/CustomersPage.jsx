@@ -4,8 +4,7 @@
 // Delete customer: confirms and if server responds 409 (FK RESTRICT: has
 // cash/deudas history), shows the verbatim message; if no history, deletes
 // and refetches the list.
-// Patrón InventoryPage: overlay .form-overlay, local validate() that returns
-// string error or null, submit deshabilitado mientras submitting.
+// Nexo design system: header, filters, list, buttons via utilities.
 
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -24,10 +23,8 @@ export default function CustomersPage() {
   const config = useConfig();
 
   const [search, setSearch] = useState('');
-  const [form, setForm] = useState(null); // {mode: 'create'} | {mode: 'edit', customer}
+  const [form, setForm] = useState(null);
   const [bannerError, setBannerError] = useState(null);
-
-  
 
   function openCreate() {
     setForm({ mode: 'create' });
@@ -48,14 +45,11 @@ export default function CustomersPage() {
     setBannerError(null);
     try {
       await mutateRemove(id);
-      // If we get here without 409, the delete succeeded
       setBannerError(null);
       queryClient.invalidateQueries({ queryKey: ['customers'] });
     } catch (err) {
-      // Server FK RESTRICT (409) — show verbatim message
       const message = err instanceof Error ? err.message : 'Ocurrió un error inesperado.';
       setBannerError(message);
-      // Don't refetch — the client stays in the list (FK RESTRICT prevented it)
     }
   }
 
@@ -65,63 +59,98 @@ export default function CustomersPage() {
       closeForm();
       queryClient.invalidateQueries({ queryKey: ['customers'] });
     } catch (err) {
-      // Server FK RESTRICT (409) — show verbatim; otherwise generic error
       const message = err instanceof Error ? err.message : 'Ocurrió un error inesperado.';
       setBannerError(message);
     }
   }
 
+  const filteredCustomers = customers.filter((c) =>
+    c.name.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
-    <section className="customers-page">
-      <header className="inventory-header">
-        <h2>Clientes</h2>
-        <NavLink to="/inventory">Inventario</NavLink>
+    <section style={{ padding: 'var(--space-4) 0' }}>
+      <header className="flex items-center justify-between gap-3 mb-4 flex-wrap" style={{ alignItems: 'center' }}>
+        <h2 style={{ margin: 0, fontSize: 'var(--text-2xl)' }}>Clientes</h2>
+        <NavLink to="/inventory" className="btn btn-secondary btn-sm">
+          Inventario
+        </NavLink>
       </header>
 
-      <form className="customers-filters">
-        <input
-          type="search"
-          placeholder="Buscar clientes…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value.trim())}
-        />
-        <button type="button" onClick={() => setSearch('')}>
+      <form onSubmit={(e) => e.preventDefault()} className="flex flex-wrap gap-3 mb-4" style={{ alignItems: 'flex-end' }}>
+        <div className="form-row" style={{ flex: 1, minWidth: '200px', flexDirection: 'column', gap: 'var(--space-1)' }}>
+          <label htmlFor="customers-search" className="label">Buscar clientes</label>
+          <input
+            id="customers-search"
+            type="search"
+            placeholder="Buscar clientes…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value.trim())}
+            className="input"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={() => setSearch('')}
+          className="btn btn-secondary"
+          style={{ minHeight: 'var(--touch-target)' }}
+        >
           Limpiar
         </button>
       </form>
 
       {bannerError && (
-        <p className="banner-error" role="alert">
+        <p className="alert alert-error" role="alert" style={{ marginBottom: 'var(--space-4)' }}>
           {bannerError}
         </p>
       )}
 
       {isPending ? (
-        <p>Cargando clientes…</p>
-      ) : customers.length === 0 ? (
-        <p>No hay clientes registrados.</p>
+        <p className="loading">Cargando clientes…</p>
+      ) : filteredCustomers.length === 0 ? (
+        <p className="empty-state">No hay clientes registrados.</p>
       ) : (
-        <div className="customers-list">
-          {customers.map((customer) => (
-            <div key={customer.id} className="customer-row">
-              <span>{customer.name}</span>
-              <span className="customer-balance">
-                Saldo abierto: {formatCurrency(customer.open_balance, config)}
-              </span>
-              <div className="customer-actions">
-                <button type="button" onClick={() => openEdit(customer)}>
-                  Editar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(customer.id)}
-                  className="danger"
-                >
-                  Eliminar
-                </button>
-              </div>
-            </div>
-          ))}
+        <div className="card" style={{ overflow: 'hidden' }}>
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th scope="col">Cliente</th>
+                  <th scope="col">Saldo abierto</th>
+                  <th scope="col" style={{ width: '180px' }}>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredCustomers.map((customer) => (
+                  <tr key={customer.id}>
+                    <td style={{ fontWeight: 'var(--font-weight-medium)' }}>{customer.name}</td>
+                    <td>{formatCurrency(customer.open_balance, config)}</td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => openEdit(customer)}
+                          className="btn btn-secondary btn-sm"
+                          aria-label={`Editar ${customer.name}`}
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(customer.id)}
+                          className="btn btn-danger btn-sm"
+                          aria-label={`Eliminar ${customer.name}`}
+                          disabled={isDeleting}
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -134,7 +163,7 @@ export default function CustomersPage() {
         />
       )}
 
-      {isPending && <p aria-live="polite">Procesando…</p>}
+      {isPending && <p aria-live="polite" className="loading">Procesando…</p>}
     </section>
   );
 }
