@@ -25,10 +25,29 @@ export async function createCashSale(customerId, lines) {
   return data.sale;
 }
 
+/** GET /api/cash-sales → { sales: [...], total, limit, offset }. */
+export async function getCashSales({ limit = 50, offset = 0, customerId, signal } = {}) {
+  const params = new URLSearchParams();
+  if (limit) params.set('limit', String(limit));
+  if (offset) params.set('offset', String(offset));
+  if (customerId) params.set('customerId', customerId);
+  const query = params.toString() ? `?${params.toString()}` : '';
+  const data = await apiRequest(`/api/cash-sales${query}`, { signal });
+  return data;
+}
+
 /** GET /api/cash-sales/:saleId → sale detail (404 surfaces as ApiError). */
 export async function getCashSale(saleId, { signal } = {}) {
   const data = await apiRequest(`/api/cash-sales/${saleId}`, { signal });
   return data.sale;
+}
+
+/** List query for cash sales with pagination. */
+export function useCashSalesList({ limit = 50, offset = 0, customerId } = {}) {
+  return useQuery({
+    queryKey: [CASH_SALES_KEY[0], 'list', { limit, offset, customerId }],
+    queryFn: ({ signal }) => getCashSales({ limit, offset, customerId, signal }),
+  });
 }
 
 /** Detail query for a cash sale; disabled until a saleId exists. */
