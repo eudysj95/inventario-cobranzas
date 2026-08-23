@@ -21,6 +21,7 @@ export const CASH_SALES_KEY = ['cash-sales'];
 export async function createCashSale(customerId, lines) {
   const body = { customerId, lines };
   const data = await apiRequest('/api/cash-sales', { method: 'POST', body });
+  console.log('createCashSale response:', data);
   return data.sale;
 }
 
@@ -52,6 +53,7 @@ export function useCashSaleMutations() {
   return {
     async create(customerId, lines) {
       const sale = await createCashSale(customerId, lines);
+      console.log('useCashSaleMutations.create sale:', sale);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: PRODUCTS_KEY }),
         queryClient.invalidateQueries({ queryKey: CUSTOMERS_KEY }),

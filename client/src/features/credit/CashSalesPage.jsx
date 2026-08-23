@@ -25,6 +25,7 @@ export default function CashSalesPage() {
   async function handleCreate({ customerId, lines }) {
     setSubmitError(null);
     try {
+      console.log('handleCreate called with:', { customerId, lines });
       const sale = await create(customerId, lines);
       console.log('Cash sale created:', sale);
       if (!sale?.id) {
