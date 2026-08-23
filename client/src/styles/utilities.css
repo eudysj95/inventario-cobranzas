@@ -331,7 +331,7 @@ small { font-size: var(--text-sm); color: var(--color-text-secondary); }
 .header-brand { display: flex; align-items: center; gap: var(--space-2); text-decoration: none; color: var(--color-text); }
 .header-brand:hover { color: var(--color-primary); }
 .header-logo { flex-shrink: 0; color: var(--color-primary); }
-.header-brand-name { font-size: var(--text-lg); font-weight: var(--font-weight-semibold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.header-brand-name { font-size: var(--text-xl); font-weight: var(--font-weight-semibold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .header-nav { flex: 1 1 auto; display: flex; justify-content: center; min-width: 0; }
 .nav-list { display: flex; align-items: center; gap: var(--space-1); list-style: none; margin: 0; padding: 0; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding: var(--space-1) 0; scrollbar-width: none; }
 .nav-list::-webkit-scrollbar { display: none; }

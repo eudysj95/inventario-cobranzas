@@ -96,8 +96,8 @@ function AppShell() {
                 src="/logo-nexo.png"
                 alt=""
                 className="header-logo"
-                width="32"
-                height="32"
+                width="40"
+                height="40"
                 aria-hidden="true"
               />
               <span className="header-brand-name">{config.businessName}</span>
