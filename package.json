@@ -1,8 +1,8 @@
 {
-  "name": "inventario",
+  "name": "nexo",
   "version": "0.1.0",
   "private": true,
-  "description": "Inventory and collections management (apartados, credit sales, supplier debts).",
+  "description": "Nexo - Inventory and collections management (apartados, credit sales, supplier debts).",
   "type": "module",
   "workspaces": [
     "server",

@@ -2,7 +2,7 @@
   "name": "server",
   "version": "0.1.0",
   "private": true,
-  "description": "Inventario API — Express 4 + pg.",
+  "description": "Nexo API — Express 4 + pg.",
   "type": "module",
   "main": "src/index.js",
   "scripts": {

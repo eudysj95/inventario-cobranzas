@@ -1,4 +1,4 @@
-# Render Blueprint for Inventario (single Web Service: API + SPA)
+# Render Blueprint for Nexo (single Web Service: API + SPA)
 # Deploy: push to main → Render auto-builds & deploys
 # Required env vars in Render dashboard:
 #   - DATABASE_URL (Neon connection string, sslmode=require)
@@ -12,7 +12,7 @@
 
 services:
   - type: web
-    name: inventario
+    name: nexo
     runtime: node
     plan: free
     # Build: install deps (root + workspaces) + build client (Vite → client/dist)
