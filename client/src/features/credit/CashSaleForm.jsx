@@ -40,7 +40,16 @@ export default function CashSaleForm({ onSubmit, onCancel }) {
         i === index
           ? {
               ...line,
-              [field]: field === 'units' ? (value === '' ? '' : Number(value)) : value,
+              [field]:
+                field === 'units'
+                  ? value === ''
+                    ? ''
+                    : Number(value)
+                  : field === 'price'
+                  ? value === '' || value === null
+                    ? undefined
+                    : Number(value)
+                  : value,
             }
           : line
       )

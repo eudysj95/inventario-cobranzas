@@ -22,7 +22,7 @@ function validate(values) {
     if (!Number.isInteger(Number(line.units)) || Number(line.units) <= 0) {
       return `La línea ${i + 1} debe tener unidades enteras mayores a cero.`;
     }
-    if (line.price !== '' && (!Number.isFinite(Number(line.price)) || Number(line.price) <= 0)) {
+    if (line.price !== undefined && line.price !== null && line.price !== '' && (!Number.isFinite(Number(line.price)) || Number(line.price) <= 0)) {
       // Explicit price 0 must be rejected client-side: the server accepts
       // price >= 0 but the DB CHECK (amount > 0) then 500s on a zero line.
       return `La línea ${i + 1} debe tener un precio mayor a cero (o vacío para usar el precio de catálogo).`;
@@ -45,7 +45,16 @@ export default function CreditSaleForm({ onSubmit, onCancel }) {
         i === index
           ? {
               ...line,
-              [field]: field === 'units' ? (value === '' ? '' : Number(value)) : value,
+              [field]:
+                field === 'units'
+                  ? value === ''
+                    ? ''
+                    : Number(value)
+                  : field === 'price'
+                  ? value === '' || value === null
+                    ? undefined
+                    : Number(value)
+                  : value,
             }
           : line
       )
