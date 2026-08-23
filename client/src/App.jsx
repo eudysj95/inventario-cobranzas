@@ -92,10 +92,14 @@ function AppShell() {
               </svg>
             </button>
             <div className="header-brand" aria-label={config.businessName}>
-              <svg className="header-logo" viewBox="0 0 32 32" fill="none" aria-hidden="true" width="32" height="32">
-                <rect width="32" height="32" rx="8" fill="var(--color-primary)"/>
-                <path d="M8 16L14 22L24 10" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+              <img
+                src="/logo-nexo.png"
+                alt=""
+                className="header-logo"
+                width="32"
+                height="32"
+                aria-hidden="true"
+              />
               <span className="header-brand-name">{config.businessName}</span>
             </div>
           </div>

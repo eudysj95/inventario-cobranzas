@@ -54,6 +54,25 @@ export async function getCreditSale(saleId, { signal } = {}) {
   return data.sale;
 }
 
+/** GET /api/credit-sales → { sales: [...], total, limit, offset }. */
+export async function getCreditSalesList({ limit = 50, offset = 0, customerId, signal } = {}) {
+  const params = new URLSearchParams();
+  if (limit) params.set('limit', String(limit));
+  if (offset) params.set('offset', String(offset));
+  if (customerId) params.set('customerId', customerId);
+  const query = params.toString() ? `?${params.toString()}` : '';
+  const data = await apiRequest(`/api/credit-sales${query}`, { signal });
+  return data;
+}
+
+/** List query for credit sales with pagination. */
+export function useCreditSalesList({ limit = 50, offset = 0, customerId } = {}) {
+  return useQuery({
+    queryKey: [CREDIT_SALES_KEY[0], 'list', { limit, offset, customerId }],
+    queryFn: ({ signal }) => getCreditSalesList({ limit, offset, customerId, signal }),
+  });
+}
+
 /** Detail query for a sale; disabled until a saleId exists. */
 export function useSaleDetail(saleId) {
   return useQuery({

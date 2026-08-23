@@ -56,10 +56,14 @@ export default function LoginPage() {
         <div className="login-card card">
           <div className="login-header">
             <div className="login-brand" aria-label={config.businessName}>
-              <svg className="login-logo" viewBox="0 0 32 32" fill="none" aria-hidden="true" width="48" height="48">
-                <rect width="32" height="32" rx="8" fill="currentColor"/>
-                <path d="M8 16L14 22L24 10" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+              <img
+                src="/logo-nexo.png"
+                alt=""
+                className="login-logo"
+                width="48"
+                height="48"
+                aria-hidden="true"
+              />
               <span className="login-brand-name">{config.businessName}</span>
             </div>
           </div>

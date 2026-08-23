@@ -80,6 +80,58 @@ function roundMoney(n) {
   return Math.round(n * 100) / 100;
 }
 
+/**
+ * Fetch a paginated list of credit sales.
+ * Returns { sales: [...], total: number }.
+ */
+async function fetchSalesList(pool, { limit = 50, offset = 0, customerId } = {}) {
+  const params = [];
+  let where = '';
+  let paramIndex = 1;
+
+  if (customerId) {
+    where = `WHERE d.customer_id = $${paramIndex}`;
+    params.push(customerId);
+    paramIndex++;
+  }
+
+  // Total count
+  const countQuery = `
+    SELECT COUNT(DISTINCT d.sale_id) AS total
+    FROM customer_debts d
+    JOIN customers c ON c.id = d.customer_id
+    ${where}
+  `;
+  const { rows: countRows } = await pool.query(countQuery, params);
+  const total = Number(countRows[0].total);
+
+  // Sales list with aggregation
+  params.push(limit, offset);
+  const listQuery = `
+    SELECT d.sale_id AS id, d.customer_id, c.name AS customer_name,
+           MIN(d.created_at) AS created_at, SUM(d.amount) AS total,
+           COUNT(*) AS line_count
+    FROM customer_debts d
+    JOIN customers c ON c.id = d.customer_id
+    ${where}
+    GROUP BY d.sale_id, d.customer_id, c.name
+    ORDER BY MIN(d.created_at) DESC
+    LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+  `;
+  const { rows } = await pool.query(listQuery, params);
+
+  const sales = rows.map((r) => ({
+    id: r.id,
+    customer_id: r.customer_id,
+    customer_name: r.customer_name,
+    created_at: r.created_at,
+    total: Number(r.total),
+    line_count: Number(r.line_count),
+  }));
+
+  return { sales, total };
+}
+
 export default function creditSalesRouter(pool) {
   const router = Router();
   router.use(requireAuth);
@@ -203,6 +255,19 @@ export default function creditSalesRouter(pool) {
         return res.status(201).json({ sale });
       }
     }
+  });
+
+  router.get('/', async (req, res) => {
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 200);
+    const offset = Math.max(parseInt(req.query.offset) || 0, 0);
+    const customerId = req.query.customerId;
+
+    if (customerId && !isUuid(customerId)) {
+      return badRequest(res, 'customerId must be a valid UUID');
+    }
+
+    const { sales, total } = await fetchSalesList(pool, { limit, offset, customerId });
+    return res.status(200).json({ sales, total, limit, offset });
   });
 
   router.get('/:saleId', async (req, res) => {
