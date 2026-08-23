@@ -40,7 +40,16 @@ export default function CreditSaleForm({ onSubmit, onCancel }) {
   const [submitting, setSubmitting] = useState(false);
 
   function updateLine(index, field, value) {
-    setLines((prev) => prev.map((line, i) => (i === index ? { ...line, [field]: value } : line)));
+    setLines((prev) =>
+      prev.map((line, i) =>
+        i === index
+          ? {
+              ...line,
+              [field]: field === 'units' ? (value === '' ? '' : Number(value)) : value,
+            }
+          : line
+      )
+    );
   }
 
   function addLine() {

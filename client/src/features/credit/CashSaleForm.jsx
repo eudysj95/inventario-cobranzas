@@ -36,7 +36,14 @@ export default function CashSaleForm({ onSubmit, onCancel }) {
 
   function updateLine(index, field, value) {
     setLines((prev) =>
-      prev.map((line, i) => (i === index ? { ...line, [field]: value } : line))
+      prev.map((line, i) =>
+        i === index
+          ? {
+              ...line,
+              [field]: field === 'units' ? (value === '' ? '' : Number(value)) : value,
+            }
+          : line
+      )
     );
   }
 
