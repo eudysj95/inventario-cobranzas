@@ -1,7 +1,6 @@
-// Dashboard page — compact single-screen overview.
-// Fetches aggregated stats from /api/dashboard/stats and renders KPI cards,
-// mini charts, and actionable lists — all fitting in one viewport.
-// Nexo design system: tight grid, compact cards, mini charts via recharts.
+// Dashboard page — ultra-compact single-screen overview.
+// Everything fits in one viewport without scroll.
+// Nexo design system: ultra-tight grid, minimal cards, micro charts via recharts.
 
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
@@ -13,11 +12,6 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   Cell,
 } from 'recharts';
-
-const COLLECTION_TYPE_LABELS = {
-  apartado: 'Apartado',
-  credit: 'Crédito',
-};
 
 export default function DashboardPage() {
   const { data: configData } = useConfig();
@@ -37,98 +31,66 @@ export default function DashboardPage() {
   const stats = data ?? {};
 
   return (
-    <section style={{ padding: 'var(--space-3) 0', maxHeight: 'calc(100vh - var(--space-12))', overflow: 'hidden' }}>
-      <header className="flex items-center justify-between gap-2 mb-3 flex-wrap" style={{ alignItems: 'center' }}>
+    <section style={{ padding: 'var(--space-2) 0', maxHeight: 'calc(100vh - var(--space-8))', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <header className="flex items-center justify-between gap-1 mb-2 flex-wrap" style={{ alignItems: 'center' }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 'var(--text-xl)' }}>Dashboard</h1>
-          <p className="form-hint" style={{ marginTop: 'var(--space-0)', fontSize: 'var(--text-xs)' }}>
+          <h1 style={{ margin: 0, fontSize: 'var(--text-lg)', fontWeight: 'var(--font-weight-semibold)' }}>Dashboard</h1>
+          <p className="form-hint" style={{ marginTop: '0', fontSize: '10px', lineHeight: 1 }}>
             Actualizado {new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
           </p>
         </div>
-        <button type="button" onClick={() => refetch()} className="btn btn-secondary btn-sm" disabled={isPending} style={{ padding: 'var(--space-1) var(--space-2)', fontSize: 'var(--text-xs)' }}>
-          Actualizar
+        <button type="button" onClick={() => refetch()} className="btn btn-secondary" disabled={isPending} style={{ padding: '2px 8px', fontSize: '9px', minHeight: '24px' }}>
+          ⟳
         </button>
       </header>
 
-      {/* KPI Cards Row - compact */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-3">
-        <KPICard title="Ventas hoy" value={formatCurrency(stats.sales?.today ?? 0, config)} subtitle={`Ef: ${formatCurrency(stats.sales?.cashToday ?? 0, config)} Cr: ${formatCurrency(stats.sales?.creditToday ?? 0, config)}`} icon="💰" trend={stats.sales?.today > 0 ? 'up' : 'neutral'} />
-        <KPICard title="Stock bajo" value={stats.inventory?.lowStock ?? 0} subtitle={`${stats.inventory?.outOfStock ?? 0} sin stock · Tot: ${formatCurrency(stats.inventory?.totalValue ?? 0, config)}`} icon="📦" trend={stats.inventory?.lowStock > 0 ? 'down' : 'up'} />
-        <KPICard title="Cobrar urg." value={stats.collections?.overdueToday ?? 0} subtitle={`Próx 3d: ${stats.collections?.dueNext3Days ?? 0} · S/tel: ${stats.collections?.withoutPhone ?? 0}`} icon="📞" trend={stats.collections?.overdueToday > 0 ? 'down' : 'up'} />
-        <KPICard title="Proveedores" value={stats.suppliers?.overdue ?? 0} subtitle={`Próx 7d: ${stats.suppliers?.dueNext7Days ?? 0} · Ab: ${stats.suppliers?.openDebts ?? 0}`} icon="🏪" trend={stats.suppliers?.overdue > 0 ? 'down' : 'up'} />
+      {/* KPI Cards Row - 4 cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-1 mb-1">
+        <MicroKPI title="Ventas hoy" value={formatCurrency(stats.sales?.today ?? 0, config)} subtitle={`Ef ${formatCurrency(stats.sales?.cashToday ?? 0, config)} · Cr ${formatCurrency(stats.sales?.creditToday ?? 0, config)}`} icon="💰" trend={stats.sales?.today > 0 ? 'up' : 'neutral'} />
+        <MicroKPI title="Stock bajo" value={stats.inventory?.lowStock ?? 0} subtitle={`${stats.inventory?.outOfStock ?? 0} sin · Tot ${formatCurrency(stats.inventory?.totalValue ?? 0, config)}`} icon="📦" trend={stats.inventory?.lowStock > 0 ? 'down' : 'up'} />
+        <MicroKPI title="Cobrar urg" value={stats.collections?.overdueToday ?? 0} subtitle={`+3d ${stats.collections?.dueNext3Days ?? 0} · S/tel ${stats.collections?.withoutPhone ?? 0}`} icon="📞" trend={stats.collections?.overdueToday > 0 ? 'down' : 'up'} />
+        <MicroKPI title="Proveedores" value={stats.suppliers?.overdue ?? 0} subtitle={`+7d ${stats.suppliers?.dueNext7Days ?? 0} · Ab ${stats.suppliers?.openDebts ?? 0}`} icon="🏪" trend={stats.suppliers?.overdue > 0 ? 'down' : 'up'} />
       </div>
 
-      {/* Charts Row - half height */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 mb-3">
-        <MiniCard title="Ventas 7d">
-          <MiniSalesChart />
-        </MiniCard>
-        <MiniCard title="Top 5 productos (30d)">
-          <MiniTopProductsChart />
-        </MiniCard>
+      {/* Charts Row - 2 mini charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-1 mb-1">
+        <MicroCard title="Ventas 7d"><MicroSalesChart /></MicroCard>
+        <MicroCard title="Top 5 prod (30d)"><MicroTopProductsChart /></MicroCard>
       </div>
 
-      {/* Lists Row - compact */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 mb-3">
-        <MiniCard title="Ventas recientes">
-          <MiniRecentSalesTable sales={stats.recentSales ?? []} config={config} />
-        </MiniCard>
-        <MiniCard title="Requieren atención">
-          <MiniUrgentItemsList stats={stats} config={config} />
-        </MiniCard>
+      {/* Lists Row - 2 compact lists */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-1 mb-1">
+        <MicroCard title="Ventas recientes"><MicroRecentSales sales={stats.recentSales ?? []} config={config} /></MicroCard>
+        <MicroCard title="Atención"><MicroUrgentItems stats={stats} /></MicroCard>
       </div>
 
-      {/* Quick Actions - compact single row */}
-      <MiniCard title="Acciones rápidas">
-        <MiniQuickActions actions={stats.quickActions ?? {}} />
-      </MiniCard>
+      {/* Quick Actions - 3 cols */}
+      <MicroCard title="Acciones"><MicroQuickActions actions={stats.quickActions ?? {}} /></MicroCard>
     </section>
   );
 }
 
-/** Mini Card wrapper */
-function MiniCard({ title, children }) {
+/** Micro KPI Card - ultra compact */
+function MicroKPI({ title, value, subtitle, icon, trend }) {
+  const trendColors = { up: 'var(--color-success)', down: 'var(--color-danger)', neutral: 'var(--color-text-secondary)' };
   return (
     <div className="card" style={{ minHeight: 0 }}>
-      <div className="card-header" style={{ padding: 'var(--space-2) var(--space-3)', borderBottom: '1px solid var(--color-border)' }}>
-        <h3 style={{ margin: 0, fontSize: 'var(--text-sm)', fontWeight: 'var(--font-weight-semibold)' }}>{title}</h3>
-      </div>
-      <div className="card-body" style={{ padding: 'var(--space-2) var(--space-3)', minHeight: 0, overflow: 'hidden' }}>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-/** Compact KPI Card */
-function KPICard({ title, value, subtitle, icon, trend }) {
-  const trendColors = {
-    up: 'var(--color-success)',
-    down: 'var(--color-danger)',
-    neutral: 'var(--color-text-secondary)',
-  };
-  return (
-    <div className="card" style={{ minHeight: 0 }}>
-      <div className="card-body" style={{ padding: 'var(--space-2) var(--space-3)' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--space-2)' }}>
+      <div className="card-body" style={{ padding: '4px 8px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '4px' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p className="form-hint mb-0" style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--font-weight-medium)', marginBottom: 'var(--space-1)' }}>{title}</p>
-            <p style={{ margin: 0, fontSize: 'var(--text-xl)', fontWeight: 'var(--font-weight-bold)', color: 'var(--color-text)', lineHeight: 1.2 }}>{value}</p>
-            <p className="form-hint" style={{ fontSize: 'var(--text-xs)', marginTop: 'var(--space-1)', lineHeight: 1.3 }}>{subtitle}</p>
+            <p style={{ margin: '0 0 2px', fontSize: '9px', fontWeight: 600, color: 'var(--color-text-secondary)', lineHeight: 1.1 }}>{title}</p>
+            <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: 'var(--color-text)', lineHeight: 1.15 }}>{value}</p>
+            <p style={{ margin: '1px 0 0', fontSize: '8px', color: 'var(--color-text-secondary)', lineHeight: 1.1 }}>{subtitle}</p>
           </div>
-          <div style={{ fontSize: '1.5rem', opacity: 0.6, flexShrink: 0 }}>{icon}</div>
+          <span style={{ fontSize: '12px', opacity: 0.7, flexShrink: 0 }}>{icon}</span>
         </div>
-        <div style={{ marginTop: 'var(--space-1)' }}>
+        <div style={{ marginTop: '2px' }}>
           <span style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 'var(--space-1)',
-            padding: 'var(--space-0) var(--space-1)',
-            borderRadius: 'var(--radius-full)',
-            fontSize: '10px',
-            fontWeight: 'var(--font-weight-semibold)',
-            background: `${trendColors[trend]}20`,
-            color: trendColors[trend],
+            display: 'inline-flex', alignItems: 'center', gap: '2px',
+            padding: '0 4px', borderRadius: '999px',
+            fontSize: '7px', fontWeight: 600,
+            background: `${({ up: 'var(--color-success)', down: 'var(--color-danger)', neutral: 'var(--color-text-secondary)' }[trend])}20`,
+            color: { up: 'var(--color-success)', down: 'var(--color-danger)', neutral: 'var(--color-text-secondary)' }[trend],
           }}>
             {trend === 'up' ? '↑' : trend === 'down' ? '↓' : '—'} {trend === 'up' ? 'Bien' : trend === 'down' ? 'Atención' : 'OK'}
           </span>
@@ -138,8 +100,22 @@ function KPICard({ title, value, subtitle, icon, trend }) {
   );
 }
 
-/** Mini Sales Chart - Area chart compact */
-function MiniSalesChart() {
+/** Micro Card wrapper */
+function MicroCard({ title, children }) {
+  return (
+    <div className="card" style={{ minHeight: 0 }}>
+      <div className="card-header" style={{ padding: '3px 8px', borderBottom: '1px solid var(--color-border)' }}>
+        <h3 style={{ margin: 0, fontSize: '9px', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{title}</h3>
+      </div>
+      <div className="card-body" style={{ padding: '4px 8px', minHeight: 0, overflow: 'hidden' }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/** Micro Sales Chart - 90px height */
+function MicroSalesChart() {
   const today = new Date();
   const data = Array.from({ length: 7 }, (_, i) => {
     const date = new Date(today);
@@ -152,8 +128,8 @@ function MiniSalesChart() {
   });
 
   return (
-    <ResponsiveContainer width="100%" height="140px">
-      <AreaChart data={data} margin={{ top: 5, right: 10, left: -10, bottom: -5 }}>
+    <ResponsiveContainer width="100%" height="90px">
+      <AreaChart data={data} margin={{ top: 2, right: 5, left: -5, bottom: -8 }}>
         <defs>
           <linearGradient id="colorCash" x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.3}/>
@@ -164,13 +140,13 @@ function MiniSalesChart() {
             <stop offset="95%" stopColor="var(--color-success)" stopOpacity={0}/>
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} horizontal={true} />
-        <XAxis dataKey="day" stroke="var(--color-text-secondary)" fontSize={10} tickLine={false} axisLine={false} />
-        <YAxis stroke="var(--color-text-secondary)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
+        <CartesianGrid strokeDasharray="2 2" stroke="var(--color-border)" vertical={false} horizontal={true} />
+        <XAxis dataKey="day" stroke="var(--color-text-secondary)" fontSize={8} tickLine={false} axisLine={false} />
+        <YAxis stroke="var(--color-text-secondary)" fontSize={8} tickLine={false} axisLine={false} tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
         <Tooltip
-          contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-xs)' }}
-          labelStyle={{ color: 'var(--color-text)', fontWeight: 'var(--font-weight-semibold)', fontSize: 'var(--text-xs)' }}
-          itemStyle={{ fontSize: 'var(--text-xs)' }}
+          contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '3px', fontSize: '8px' }}
+          labelStyle={{ color: 'var(--color-text)', fontWeight: 600, fontSize: '8px' }}
+          itemStyle={{ fontSize: '8px' }}
           formatter={(value) => [formatCurrency(value, { currencySymbol: '$', currencyLocale: 'es-AR' })]}
         />
         <Area type="monotone" dataKey="cash" stackId="1" fill="url(#colorCash)" stroke="var(--color-primary)" strokeWidth={1.5} />
@@ -180,8 +156,8 @@ function MiniSalesChart() {
   );
 }
 
-/** Mini Top Products Chart - Horizontal bar chart compact */
-function MiniTopProductsChart() {
+/** Micro Top Products Chart - 90px height */
+function MicroTopProductsChart() {
   const data = [
     { name: 'Remera negra M', units: 45, color: 'var(--color-primary)' },
     { name: 'Jean azul 32', units: 38, color: 'var(--color-success)' },
@@ -191,59 +167,46 @@ function MiniTopProductsChart() {
   ];
 
   return (
-    <ResponsiveContainer width="100%" height="140px">
-      <BarChart data={data} layout="vertical" margin={{ top: 5, right: 5, left: -5, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" horizontal={false} />
-        <XAxis type="number" stroke="var(--color-text-secondary)" fontSize={10} tickLine={false} axisLine={false} />
-        <YAxis type="category" dataKey="name" width={100} stroke="var(--color-text-secondary)" fontSize={10} tickLine={false} axisLine={false} />
-        <Tooltip
-          contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-xs)' }}
-          formatter={(value) => [value, 'und']}
-        />
-        <Bar dataKey="units" radius={[0, 3, 3, 0]} barSize={20}>
-          {data.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={entry.color} />
-          ))}
+    <ResponsiveContainer width="100%" height="90px">
+      <BarChart data={data} layout="vertical" margin={{ top: 2, right: 2, left: -5, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="2 2" stroke="var(--color-border)" horizontal={false} />
+        <XAxis type="number" stroke="var(--color-text-secondary)" fontSize={7} tickLine={false} axisLine={false} />
+        <YAxis type="category" dataKey="name" width={80} stroke="var(--color-text-secondary)" fontSize={8} tickLine={false} axisLine={false} />
+        <Tooltip contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '3px', fontSize: '8px' }} formatter={(value) => [value, 'und']} />
+        <Bar dataKey="units" radius={[0, 2, 2, 0]} barSize={16}>
+          {data.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
         </Bar>
       </BarChart>
     </ResponsiveContainer>
   );
 }
 
-/** Mini Recent Sales Table */
-function MiniRecentSalesTable({ sales, config }) {
-  if (!sales.length) {
-    return (
-      <div className="empty-state p-3" style={{ fontSize: 'var(--text-xs)', textAlign: 'center' }}>
-        <p>No hay ventas recientes.</p>
-      </div>
-    );
-  }
+/** Micro Recent Sales - 4 rows max */
+function MicroRecentSales({ sales, config }) {
+  if (!sales.length) return <div style={{ fontSize: '9px', color: 'var(--color-text-secondary)', textAlign: 'center', padding: '8px' }}>Sin ventas recientes</div>;
 
   return (
-    <div className="table-wrap" style={{ fontSize: 'var(--text-xs)' }}>
-      <table className="table" style={{ fontSize: 'var(--text-xs)' }}>
+    <div style={{ fontSize: '8px', lineHeight: 1.3 }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8px' }}>
         <thead>
-          <tr style={{ fontSize: 'var(--text-xs)' }}>
-            <th scope="col" style={{ padding: 'var(--space-1) var(--space-2)' }}>Venta</th>
-            <th scope="col" style={{ padding: 'var(--space-1) var(--space-2)' }}>Cliente</th>
-            <th scope="col" style={{ padding: 'var(--space-1) var(--space-2)' }}>Fecha</th>
-            <th scope="col" style={{ padding: 'var(--space-1) var(--space-2)' }}>Tipo</th>
-            <th scope="col" style={{ padding: 'var(--space-1) var(--space-2)' }}>Total</th>
+          <tr style={{ color: 'var(--color-text-secondary)', fontWeight: 600, fontSize: '7px' }}>
+            <th style={{ padding: '2px 4px', textAlign: 'left' }}>Venta</th>
+            <th style={{ padding: '2px 4px', textAlign: 'left' }}>Cliente</th>
+            <th style={{ padding: '2px 4px', textAlign: 'left' }}>Fecha</th>
+            <th style={{ padding: '2px 4px', textAlign: 'left' }}>Tipo</th>
+            <th style={{ padding: '2px 4px', textAlign: 'right' }}>Total</th>
           </tr>
         </thead>
         <tbody>
           {sales.slice(0, 4).map((sale) => (
-            <tr key={sale.id}>
-              <td style={{ padding: 'var(--space-1) var(--space-2)', fontFamily: 'var(--font-mono)', fontSize: '10px' }}>{sale.id.slice(0, 6)}…</td>
-              <td style={{ padding: 'var(--space-1) var(--space-2)' }}>{sale.customer_name}</td>
-              <td style={{ padding: 'var(--space-1) var(--space-2)', whiteSpace: 'nowrap', fontSize: '10px' }}>{formatDate(sale.created_at, config)}</td>
-              <td style={{ padding: 'var(--space-1) var(--space-2)' }}>
-                <span className={`chip chip-${sale.type === 'cash' ? 'primary' : 'success'}`} style={{ fontSize: '9px', padding: 'var(--space-0) var(--space-1)' }}>
-                  {sale.type === 'cash' ? 'C' : 'Cr'}
-                </span>
+            <tr key={sale.id} style={{ borderTop: '1px solid var(--color-border)' }}>
+              <td style={{ padding: '2px 4px', fontFamily: 'monospace', fontSize: '7px', color: 'var(--color-text-secondary)' }}>{sale.id.slice(0, 6)}…</td>
+              <td style={{ padding: '2px 4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sale.customer_name}</td>
+              <td style={{ padding: '2px 4px', whiteSpace: 'nowrap', fontSize: '7px', color: 'var(--color-text-secondary)' }}>{formatDate(sale.created_at, { currencySymbol: '$', currencyLocale: 'es-AR' })}</td>
+              <td style={{ padding: '2px 4px' }}>
+                <span style={{ fontSize: '7px', padding: '0 3px', borderRadius: '999px', background: sale.type === 'cash' ? 'var(--color-primary-light)' : 'var(--color-success-light)', color: sale.type === 'cash' ? 'var(--color-primary)' : 'var(--color-success)' }}>{sale.type === 'cash' ? 'C' : 'Cr'}</span>
               </td>
-              <td style={{ padding: 'var(--space-1) var(--space-2)', fontWeight: 'var(--font-weight-semibold)', fontSize: 'var(--text-xs)' }}>{formatCurrency(sale.total, config)}</td>
+              <td style={{ padding: '2px 4px', textAlign: 'right', fontWeight: 600, fontSize: '8px' }}>{formatCurrency(sale.total, config)}</td>
             </tr>
           ))}
         </tbody>
@@ -252,55 +215,35 @@ function MiniRecentSalesTable({ sales, config }) {
   );
 }
 
-/** Mini Urgent Items List */
-function MiniUrgentItemsList({ stats, config }) {
+/** Micro Urgent Items - compact list */
+function MicroUrgentItems({ stats }) {
   const items = [];
 
-  if ((stats.collections?.overdueToday ?? 0) > 0) {
-    items.push({ icon: '🔴', label: `${stats.collections.overdueToday} vencidos hoy`, path: '/cobros' });
-  }
-  if ((stats.collections?.dueNext3Days ?? 0) > 0) {
-    items.push({ icon: '🟡', label: `${stats.collections.dueNext3Days} vencen en 3d`, path: '/cobros' });
-  }
-  if ((stats.collections?.withoutPhone ?? 0) > 0) {
-    items.push({ icon: '📵', label: `${stats.collections.withoutPhone} sin teléfono`, path: '/clientes' });
-  }
-  if ((stats.apartados?.pending ?? 0) > 0) {
-    items.push({ icon: '📦', label: `${stats.apartados.pending} apartados pend.`, path: '/apartados' });
-  }
-  if ((stats.suppliers?.overdue ?? 0) > 0) {
-    items.push({ icon: '🏪', label: `${stats.suppliers.overdue} prov. vencidos`, path: '/proveedores' });
-  }
-  if ((stats.inventory?.lowStock ?? 0) > 0) {
-    items.push({ icon: '⚠️', label: `${stats.inventory.lowStock} stock bajo`, path: '/inventory' });
-  }
+  if ((stats.collections?.overdueToday ?? 0) > 0) items.push({ icon: '🔴', label: `${stats.collections.overdueToday} vencidos hoy`, path: '/cobros' });
+  if ((stats.collections?.dueNext3Days ?? 0) > 0) items.push({ icon: '🟡', label: `${stats.collections.dueNext3Days} vencen 3d`, path: '/cobros' });
+  if ((stats.collections?.withoutPhone ?? 0) > 0) items.push({ icon: '📵', label: `${stats.collections.withoutPhone} sin tel`, path: '/clientes' });
+  if ((stats.apartados?.pending ?? 0) > 0) items.push({ icon: '📦', label: `${stats.apartados.pending} apartados`, path: '/apartados' });
+  if ((stats.suppliers?.overdue ?? 0) > 0) items.push({ icon: '🏪', label: `${stats.suppliers.overdue} prov. vencidos`, path: '/proveedores' });
+  if ((stats.inventory?.lowStock ?? 0) > 0) items.push({ icon: '⚠️', label: `${stats.inventory.lowStock} stock bajo`, path: '/inventory' });
 
-  if (!items.length) {
-    return (
-      <div className="empty-state p-3 text-center" style={{ fontSize: 'var(--text-xs)' }}>
-        <span style={{ fontSize: '1.5rem' }}>✅</span>
-        <p className="mt-1">¡Todo al día!</p>
-      </div>
-    );
-  }
+  if (!items.length) return <div style={{ fontSize: '9px', color: 'var(--color-text-secondary)', textAlign: 'center', padding: '8px' }}>✅ Todo al día</div>;
 
   return (
-    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
-      {items.map((item, i) => (
-        <li key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-2)', padding: 'var(--space-1) var(--space-2)', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)' }}>
-          <NavLink to={item.path} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flex: 1, textDecoration: 'none', color: 'inherit' }}>
-            <span style={{ fontSize: '1rem' }}>{item.icon}</span>
-            <span style={{ fontSize: 'var(--text-xs)', lineHeight: 1.3 }}>{item.label}</span>
+    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+      {items.slice(0, 6).map((item, i) => (
+        <li key={i}>
+          <NavLink to={item.path} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', padding: '3px 6px', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '3px', textDecoration: 'none', color: 'inherit', fontSize: '8px', lineHeight: 1.2 }}>
+            <span><span style={{ marginRight: '3px' }}>{item.icon}</span>{item.label}</span>
+            <span style={{ fontSize: '7px', color: 'var(--color-text-secondary)' }}>→</span>
           </NavLink>
-          <span style={{ fontSize: '10px', color: 'var(--color-text-secondary)' }}>→</span>
         </li>
       ))}
     </ul>
   );
 }
 
-/** Mini Quick Actions */
-function MiniQuickActions({ actions }) {
+/** Micro Quick Actions - 3 cols x 2 rows */
+function MicroQuickActions({ actions }) {
   const actionItems = [
     { path: '/venta', label: 'Nueva venta', icon: '💰', disabled: !actions.hasProducts || !actions.hasCustomers },
     { path: '/credit-sales', label: 'Venta crédito', icon: '📋', disabled: !actions.hasProducts || !actions.hasCustomers },
@@ -311,93 +254,52 @@ function MiniQuickActions({ actions }) {
   ];
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-1)' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '3px' }}>
       {actionItems.map((action) => (
         <NavLink
           key={action.path}
           to={action.path}
-          className={`card p-2 text-center ${action.disabled ? 'opacity-50 pointer-events-none' : ''}`}
           style={{
-            border: '1px solid var(--color-border)',
-            transition: 'border-color var(--transition-fast)',
-            minHeight: 0,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            padding: '4px 2px', gap: '1px',
+            border: '1px solid var(--color-border)', borderRadius: '3px',
+            background: action.disabled ? 'var(--color-surface-hover)' : 'var(--color-surface)',
+            opacity: action.disabled ? 0.5 : 1, pointerEvents: action.disabled ? 'none' : 'auto',
+            textDecoration: 'none', color: 'inherit',
+            transition: 'border-color 0.1s, background 0.1s',
+            minHeight: '56px',
           }}
           onMouseEnter={(e) => !action.disabled && (e.currentTarget.style.borderColor = 'var(--color-primary)')}
           onMouseLeave={(e) => !action.disabled && (e.currentTarget.style.borderColor = 'var(--color-border)')}
         >
-          <div style={{ fontSize: '1.2rem', marginBottom: 'var(--space-0)' }}>{action.icon}</div>
-          <div style={{ fontWeight: 'var(--font-weight-medium)', fontSize: 'var(--text-xs)', lineHeight: 1.2 }}>{action.label}</div>
+          <span style={{ fontSize: '11px' }}>{action.icon}</span>
+          <span style={{ fontWeight: 600, fontSize: '7px', lineHeight: 1.1, whiteSpace: 'nowrap' }}>{action.label}</span>
         </NavLink>
       ))}
     </div>
   );
 }
 
-/** Loading Skeleton - compact */
+/** Skeleton */
 function DashboardSkeleton() {
   return (
-    <section style={{ padding: 'var(--space-3) 0', maxHeight: 'calc(100vh - var(--space-12))', overflow: 'hidden' }}>
-      <header className="flex items-center justify-between gap-2 mb-3 flex-wrap" style={{ alignItems: 'center' }}>
-        <div className="skeleton" style={{ width: '120px', height: '20px', borderRadius: 'var(--radius-md)' }} />
-      </header>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-3">
-        {[1,2,3,4].map(i => <SkeletonCard key={i} />)}
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 mb-3">
-        <SkeletonMiniChart /><SkeletonMiniChart />
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 mb-3">
-        <SkeletonMiniList /><SkeletonMiniList />
-      </div>
-      <SkeletonMiniCard />
+    <section style={{ padding: 'var(--space-2) 0', maxHeight: 'calc(100vh - var(--space-8))', overflow: 'hidden' }}>
+      <header className="flex items-center justify-between gap-1 mb-2"><div className="skeleton" style={{ width: '80px', height: '16px', borderRadius: '3px' }} /></header>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-1 mb-1">{[1,2,3,4].map(i => <MicroSkeleton key={i} />)}</div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-1 mb-1"><MicroSkeletonChart /><MicroSkeletonChart /></div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-1 mb-1"><MicroSkeletonList /><MicroSkeletonList /></div>
+      <MicroSkeletonCard />
     </section>
   );
 }
 
-function SkeletonCard() {
-  return (
-    <div className="card" style={{ minHeight: 0 }}>
-      <div className="card-body" style={{ padding: 'var(--space-2) var(--space-3)' }}>
-        <div className="skeleton mb-1" style={{ width: '50%', height: '10px', borderRadius: 'var(--radius-sm)' }} />
-        <div className="skeleton" style={{ width: '40%', height: '20px', borderRadius: 'var(--radius-sm)' }} />
-      </div>
-    </div>
-  );
+function MicroSkeleton() {
+  return <div className="card"><div style={{ padding: '4px 8px' }}><div className="skeleton" style={{ width: '50%', height: '8px', borderRadius: '2px', marginBottom: '2px' }} /><div className="skeleton" style={{ width: '40%', height: '12px', borderRadius: '2px' }} /></div></div>;
 }
-
-function SkeletonMiniChart() {
-  return (
-    <div className="card" style={{ minHeight: 0 }}>
-      <div className="card-body skeleton" style={{ height: '140px', borderRadius: 'var(--radius-md)', padding: 'var(--space-2) var(--space-3)' }} />
-    </div>
-  );
-}
-
-function SkeletonMiniList() {
-  return (
-    <div className="card" style={{ minHeight: 0 }}>
-      <div className="card-body skeleton" style={{ height: '160px', borderRadius: 'var(--radius-md)', padding: 'var(--space-2) var(--space-3)' }} />
-    </div>
-  );
-}
-
-function SkeletonMiniCard() {
-  return (
-    <div className="card" style={{ minHeight: 0 }}>
-      <div className="card-body skeleton" style={{ height: '100px', borderRadius: 'var(--radius-md)', padding: 'var(--space-2) var(--space-3)' }} />
-    </div>
-  );
-}
+function MicroSkeletonChart() { return <div className="card"><div className="skeleton" style={{ height: '90px', borderRadius: '3px', padding: '4px 8px' }} /></div>; }
+function MicroSkeletonList() { return <div className="card"><div className="skeleton" style={{ height: '120px', borderRadius: '3px', padding: '4px 8px' }} /></div>; }
+function MicroSkeletonCard() { return <div className="card"><div className="skeleton" style={{ height: '70px', borderRadius: '3px', padding: '4px 8px' }} /></div>; }
 
 function DashboardError({ onRetry }) {
-  return (
-    <div className="card" style={{ minHeight: 0 }}>
-      <div className="card-body text-center p-4" style={{ minHeight: 0 }}>
-        <div className="skeleton" style={{ width: '32px', height: '32px', borderRadius: '50%', margin: '0 auto var(--space-2)', background: 'var(--color-danger-light)' }} />
-        <h3 style={{ margin: '0 0 var(--space-1)', color: 'var(--color-danger)', fontSize: 'var(--text-sm)' }}>Error al cargar</h3>
-        <p className="form-hint mb-3" style={{ fontSize: 'var(--text-xs)' }}>No se pudieron obtener las estadísticas.</p>
-        <button type="button" onClick={onRetry} className="btn btn-primary btn-sm" style={{ fontSize: 'var(--text-xs)', padding: 'var(--space-1) var(--space-2)' }}>Reintentar</button>
-      </div>
-    </div>
-  );
+  return <div className="card" style={{ minHeight: 0 }}><div style={{ padding: '12px', textAlign: 'center' }}><div className="skeleton" style={{ width: '24px', height: '24px', borderRadius: '50%', margin: '0 auto 4px', background: 'var(--color-danger-light)' }} /><h3 style={{ margin: '0 0 2px', color: 'var(--color-danger)', fontSize: '9px' }}>Error</h3><p style={{ fontSize: '8px', color: 'var(--color-text-secondary)', margin: '0 0 4px' }}>No se cargaron stats</p><button onClick={onRetry} style={{ padding: '2px 8px', fontSize: '8px', minHeight: '24px' }} className="btn btn-primary">Reintentar</button></div></div>;
 }
