@@ -13,7 +13,7 @@ import { useProducts } from '../../api/products.js';
 import CustomerSelect from '../../features/customer/CustomerSelect.jsx';
 import { formatCurrency } from '../../lib/format.js';
 
-const EMPTY_LINE = { productId: '', units: '', price: '' };
+const EMPTY_LINE = { productId: '', units: '', price: undefined };
 
 function validate(values) {
   if (!values.customerId) return 'Debe seleccionar un cliente.';
@@ -166,7 +166,7 @@ export default function CashSaleForm({ onSubmit, onCancel }) {
                       min="0.01"
                       step="0.01"
                       placeholder="Catálogo"
-                      value={line.price}
+                      value={line.price ?? ''}
                       onChange={(event) =>
                         updateLine(index, 'price', event.target.value)
                       }

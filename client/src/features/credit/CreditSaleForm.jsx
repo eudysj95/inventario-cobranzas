@@ -12,7 +12,7 @@ import { useProducts } from '../../api/products.js';
 import { buildCreditSaleBody } from '../../api/credit-sales.js';
 import CustomerSelect from '../../features/customer/CustomerSelect.jsx';
 
-const EMPTY_LINE = { productId: '', units: '', price: '' };
+const EMPTY_LINE = { productId: '', units: '', price: undefined };
 
 function validate(values) {
   if (!values.customerId) return 'Debe seleccionar un cliente.';
@@ -165,7 +165,7 @@ export default function CreditSaleForm({ onSubmit, onCancel }) {
                       min="0.01"
                       step="0.01"
                       placeholder="Catálogo"
-                      value={line.price}
+                      value={line.price ?? ''}
                       onChange={(event) => updateLine(index, 'price', event.target.value)}
                       disabled={submitting}
                       className="input"
