@@ -63,7 +63,7 @@ export function useSaleDetail(saleId) {
   });
 }
 
-/** Create mutation that invalidates products (stock) and customers (debts). */
+/** Create mutation that invalidates products (stock), customers (debts), and credit-sales queries. */
 export function useCreditSaleMutations() {
   const queryClient = useQueryClient();
 
@@ -73,6 +73,7 @@ export function useCreditSaleMutations() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: PRODUCTS_KEY }),
         queryClient.invalidateQueries({ queryKey: CUSTOMERS_KEY }),
+        queryClient.invalidateQueries({ queryKey: CREDIT_SALES_KEY }),
         // New open debts may enter the collections due view.
         queryClient.invalidateQueries({ queryKey: COLLECTIONS_KEY }),
       ]);

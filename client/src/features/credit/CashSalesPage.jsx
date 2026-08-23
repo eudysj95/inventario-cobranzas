@@ -19,11 +19,23 @@ export default function CashSalesPage() {
   const { create } = useCashSaleMutations();
   const { data: sale, isPending: isDetailPending, isError: isDetailError } = useCashSaleDetail(null);
   const [createdSaleId, setCreatedSaleId] = useState(null);
+  const [submitError, setSubmitError] = useState(null);
   const navigate = useNavigate();
 
   async function handleCreate({ customerId, lines }) {
-    const sale = await create(customerId, lines);
-    setCreatedSaleId(sale.id);
+    setSubmitError(null);
+    try {
+      const sale = await create(customerId, lines);
+      console.log('Cash sale created:', sale);
+      if (!sale?.id) {
+        throw new Error('Server returned sale without id');
+      }
+      setCreatedSaleId(sale.id);
+    } catch (err) {
+      console.error('Cash sale creation failed:', err);
+      setSubmitError(err instanceof Error ? err.message : 'Ocurrió un error inesperado.');
+      throw err; // re-throw so form can catch and display
+    }
   }
 
   if (createdSaleId) {
@@ -54,6 +66,12 @@ export default function CashSalesPage() {
           Nueva venta de contado
         </button>
       </header>
+
+      {submitError && (
+        <p className="alert alert-error" role="alert" style={{ marginBottom: 'var(--space-4)' }}>
+          {submitError}
+        </p>
+      )}
 
       {formOpen && (
         <CashSaleForm onSubmit={handleCreate} onCancel={() => setFormOpen(false)} />

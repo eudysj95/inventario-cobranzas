@@ -17,11 +17,23 @@ export default function CreditSalesPage() {
   const { create } = useCreditSaleMutations();
   const [createdSaleId, setCreatedSaleId] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
 
   async function handleCreate(body) {
-    const sale = await create(body);
-    setCreatedSaleId(sale.id);
-    setFormOpen(false);
+    setSubmitError(null);
+    try {
+      const sale = await create(body);
+      console.log('Credit sale created:', sale);
+      if (!sale?.id) {
+        throw new Error('Server returned sale without id');
+      }
+      setCreatedSaleId(sale.id);
+      setFormOpen(false);
+    } catch (err) {
+      console.error('Credit sale creation failed:', err);
+      setSubmitError(err instanceof Error ? err.message : 'Ocurrió un error inesperado.');
+      throw err;
+    }
   }
 
   if (createdSaleId) {
@@ -50,6 +62,12 @@ export default function CreditSalesPage() {
           Nueva venta a crédito
         </button>
       </header>
+
+      {submitError && (
+        <p className="alert alert-error" role="alert" style={{ marginBottom: 'var(--space-4)' }}>
+          {submitError}
+        </p>
+      )}
 
       {formOpen && (
         <CreditSaleForm onSubmit={handleCreate} onCancel={() => setFormOpen(false)} />
