@@ -14,6 +14,7 @@ import collectionsRouter from './routes/collections.js';
 import cashSalesRouter from './routes/cash-sales.js';
 import suppliersRouter from './routes/suppliers.js';
 import supplierDebtsRouter from './routes/supplier-debts.js';
+import dashboardRouter from './routes/dashboard.js';
 
 // Extensions that identify a file request, not a client-side route. The SPA
 // fallback must not answer these with index.html: a missing/stale asset
@@ -58,6 +59,9 @@ app.use('/api/cash-sales', cashSalesRouter(pool));
   // Supplier debt registry routes (auth-guarded inside the routers).
   app.use('/api/suppliers', suppliersRouter(pool));
   app.use('/api/supplier-debts', supplierDebtsRouter(pool));
+
+  // Dashboard routes (auth-guarded inside the router).
+  app.use('/api/dashboard', dashboardRouter(pool));
 
   // JSON 404 for unknown API routes (keeps the SPA fallback for / untouched).
   app.use('/api', (_req, res) => {

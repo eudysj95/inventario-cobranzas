@@ -8,6 +8,7 @@ import { DEFAULT_CONFIG, useConfig } from './api/config.js';
 import { useAuthActions } from './api/auth.js';
 import RequireAuth from './auth/RequireAuth.jsx';
 import LoginPage from './features/auth/LoginPage.jsx';
+import DashboardPage from './features/dashboard/DashboardPage.jsx';
 import InventoryPage from './features/inventory/InventoryPage.jsx';
 import ApartadosPage from './features/apartados/ApartadosPage.jsx';
 import CreditSalesPage from './features/credit/CreditSalesPage.jsx';
@@ -20,6 +21,7 @@ import './styles/design-tokens.css';
 import './styles/utilities.css';
 
 const NAV_ITEMS = [
+  { path: '/', label: 'Dashboard' },
   { path: '/venta', label: 'Venta' },
   { path: '/credit-sales', label: 'Venta a crédito' },
   { path: '/apartados', label: 'Apartados' },
@@ -207,7 +209,7 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route element={<RequireAuth />}>
         <Route element={<AppShell />}>
-          <Route index element={<Navigate to="/inventory" replace />} />
+          <Route index element={<DashboardPage />} />
           <Route path="inventory" element={<InventoryPage />} />
           <Route path="clientes" element={<CustomersPage />} />
           <Route path="apartados" element={<ApartadosPage />} />
