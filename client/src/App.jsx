@@ -20,14 +20,14 @@ import './styles/design-tokens.css';
 import './styles/utilities.css';
 
 const NAV_ITEMS = [
-  { path: '/inventory', label: 'Inventario' },
-  { path: '/clientes', label: 'Clientes' },
-  { path: '/apartados', label: 'Apartados' },
-  { path: '/credit-sales', label: 'Venta a crédito' },
   { path: '/venta', label: 'Venta' },
-  { path: '/cobros', label: 'Cobranzas' },
+  { path: '/credit-sales', label: 'Venta a crédito' },
+  { path: '/apartados', label: 'Apartados' },
   { path: '/payments', label: 'Pagos' },
+  { path: '/cobros', label: 'Cobranzas' },
   { path: '/proveedores', label: 'Proveedores' },
+  { path: '/clientes', label: 'Clientes' },
+  { path: '/inventory', label: 'Inventario' },
 ];
 
 function AppShell() {
