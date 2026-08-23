@@ -58,7 +58,7 @@ export default function LoginPage() {
             <div className="login-brand" aria-label={config.businessName}>
               <svg className="login-logo" viewBox="0 0 32 32" fill="none" aria-hidden="true" width="48" height="48">
                 <rect width="32" height="32" rx="8" fill="currentColor"/>
-                <path d="M8 16L14 22L24 10" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M8 16L14 22L24 10" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
               <span className="login-brand-name">{config.businessName}</span>
             </div>
@@ -69,7 +69,7 @@ export default function LoginPage() {
 
           {error && (
             <div className="alert alert-error" role="alert" aria-live="assertive">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                 <circle cx="12" cy="12" r="10"/>
                 <line x1="12" y1="8" x2="12" y2="12"/>
                 <line x1="12" y1="16" x2="12.01" y2="16"/>

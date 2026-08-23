@@ -83,7 +83,7 @@ export default function ProductForm({ product, onSubmit, onCancel }) {
         <div className="modal-header">
           <h2 className="modal-title">{isEdit ? `Editar producto: ${product.name}` : 'Nuevo producto'}</h2>
           <button type="button" className="modal-close" onClick={onCancel} aria-label="Cerrar" disabled={submitting}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <line x1="18" y1="6" x2="6" y2="18"/>
               <line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
@@ -100,7 +100,7 @@ export default function ProductForm({ product, onSubmit, onCancel }) {
 
           {error && (
             <div className="alert alert-error" role="alert" style={{ marginBottom: 'var(--space-3)' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                 <circle cx="12" cy="12" r="10"/>
                 <line x1="12" y1="8" x2="12" y2="12"/>
                 <line x1="12" y1="16" x2="12.01" y2="16"/>

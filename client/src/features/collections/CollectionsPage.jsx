@@ -144,7 +144,7 @@ function CustomerCard({ customer, config }) {
             rel="noopener noreferrer"
             title="Enviar recordatorio por WhatsApp"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style={{ marginRight: 'var(--space-1)' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" style={{ marginRight: 'var(--space-1)' }}>
               <path d="M17 9.21V20a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-2.79A6 6 0 0 1 4 12a6 6 0 0 1 4-5.65V4.21A1 1 0 0 1 4.79 3H8a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2.15A6 6 0 0 1 20 12a6 6 0 0 1-3 5.65z"/>
               <path d="M12 7v8"/>
               <path d="M9 10h6"/>
