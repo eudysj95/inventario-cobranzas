@@ -54,8 +54,8 @@ export default function DashboardPage() {
 
       {/* Charts Row - 2 mini charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-1 mb-1">
-        <MicroCard title="Ventas 7d"><MicroSalesChart /></MicroCard>
-        <MicroCard title="Top 5 prod (30d)"><MicroTopProductsChart /></MicroCard>
+        <MicroCard title="Ventas 7d" $chart><MicroSalesChart /></MicroCard>
+        <MicroCard title="Top 5 prod (30d)" $chart><MicroTopProductsChart /></MicroCard>
       </div>
 
       {/* Lists Row - 2 compact lists */}
@@ -101,13 +101,13 @@ function MicroKPI({ title, value, subtitle, icon, trend }) {
 }
 
 /** Micro Card wrapper */
-function MicroCard({ title, children }) {
+function MicroCard({ title, children, $chart = false }) {
   return (
     <div className="card" style={{ minHeight: 0 }}>
       <div className="card-header" style={{ padding: '3px 8px', borderBottom: '1px solid var(--color-border)' }}>
         <h3 style={{ margin: 0, fontSize: '9px', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{title}</h3>
       </div>
-      <div className="card-body" style={{ padding: '4px 8px', minHeight: 0, overflow: 'hidden' }}>
+      <div className="card-body" style={{ padding: '4px 8px', minHeight: $chart ? undefined : 0, overflow: $chart ? 'visible' : 'hidden' }}>
         {children}
       </div>
     </div>
