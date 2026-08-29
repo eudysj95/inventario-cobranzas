@@ -1,0 +1,16 @@
+name: Design Tokens Sync
+
+on:
+  pull_request:
+    paths:
+      - 'design-system/**'
+      - 'client/src/styles/design-tokens.css'
+
+jobs:
+  verify-tokens:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v1
+      - run: cd design-system && bun install && bun run build-tokens
+      - run: git diff --exit-code client/src/styles/design-tokens.css design-system/tokens.json design-system/tokens.d.ts
