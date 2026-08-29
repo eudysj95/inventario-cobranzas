@@ -1,0 +1,145 @@
+/* AppLayout — Root layout using CSS Grid
+   Areas: sidebar | header
+          sidebar | main
+   Responsive: desktop (>1024px), tablet (768-1024px), mobile (<768px) */
+
+.app-layout {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  grid-template-rows: var(--header-height) 1fr;
+  grid-template-areas:
+    "sidebar header"
+    "sidebar main";
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* Sidebar area */
+.sidebar {
+  grid-area: sidebar;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  z-index: var(--z-sticky);
+  transition: width var(--transition-normal) ease;
+}
+
+/* Header area */
+.header {
+  grid-area: header;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+}
+
+/* Main content area */
+.main {
+  grid-area: main;
+  background: var(--color-bg);
+  overflow: auto;
+  padding: var(--space-4) var(--space-6);
+  min-height: 0; /* Allows flex/grid children to shrink */
+}
+
+/* ===== RESPONSIVE BREAKPOINTS ===== */
+
+/* Tablet: 768px - 1024px — Sidebar collapsible */
+@media (max-width: 1024px) {
+  .app-layout {
+    grid-template-columns: var(--sidebar-width) 1fr;
+  }
+
+  .sidebar.collapsed {
+    width: var(--sidebar-collapsed);
+  }
+
+  .sidebar.collapsed + .header,
+  .sidebar.collapsed ~ .main {
+    /* Header and main adjust automatically via grid */
+  }
+}
+
+/* Mobile: < 768px — Sidebar becomes drawer (handled by SidebarDrawer) */
+@media (max-width: 767px) {
+  .app-layout {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "header"
+      "main";
+  }
+
+  .sidebar {
+    display: none; /* Hidden on mobile, replaced by SidebarDrawer */
+  }
+
+  .header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--header-height);
+    z-index: var(--z-fixed);
+  }
+
+  .main {
+    padding-top: calc(var(--header-height) + var(--space-4));
+    padding-bottom: var(--space-4);
+  }
+}
+
+/* ===== SIDEBAR STATES ===== */
+
+/* Expanded sidebar (default desktop) */
+.sidebar:not(.collapsed) {
+  width: var(--sidebar-width);
+}
+
+/* Collapsed sidebar (tablet/desktop toggle) */
+.sidebar.collapsed {
+  width: var(--sidebar-collapsed);
+}
+
+.sidebar.collapsed .sidebar-brand-name,
+.sidebar.collapsed .nav-label,
+.sidebar.collapsed .user-menu-label {
+  display: none;
+}
+
+.sidebar.collapsed .nav-item {
+  justify-content: center;
+  padding: var(--space-3);
+}
+
+.sidebar.collapsed .user-menu {
+  justify-content: center;
+  padding: var(--space-3);
+}
+
+/* ===== REDUCED MOTION ===== */
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .app-layout {
+    transition: none;
+  }
+}
+
+/* ===== HIGH CONTRAST ===== */
+@media (prefers-contrast: high) {
+  .sidebar {
+    border-right: 2px solid currentColor;
+  }
+
+  .header {
+    border-bottom: 2px solid currentColor;
+  }
+}

@@ -1,13 +1,15 @@
 // Application shell + routes — Nexo design system.
 // Branding from /api/config (tenant-aware). Protected routes behind RequireAuth.
-// Responsive AppShell: header + nav drawer (hamburger < 768px).
+// Feature flag VITE_NEW_LAYOUT controls new layout (sidebar + header + breadcrumbs).
+// Feature flag VITE_NEW_LOGIN=true enables new login page (default: false)
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense, lazy } from 'react';
 import { NavLink, Navigate, Outlet, Route, Routes, useNavigate, useLocation } from 'react-router-dom';
 import { DEFAULT_CONFIG, useConfig } from './api/config.js';
 import { useAuthActions } from './api/auth.js';
 import RequireAuth from './auth/RequireAuth.jsx';
-import LoginPage from './features/auth/LoginPage.jsx';
+import LoginPage from './features/auth/LoginPage.tsx'; // New login page (TypeScript)
+import LoginPageLegacy from './features/auth/LoginPage.old.jsx'; // Old login page (fallback)
 import DashboardPage from './features/dashboard/DashboardPage.jsx';
 import InventoryPage from './features/inventory/InventoryPage.jsx';
 import ApartadosPage from './features/apartados/ApartadosPage.jsx';
@@ -17,19 +19,32 @@ import PaymentsPanel from './features/credit/PaymentsPanel.jsx';
 import CollectionsPage from './features/collections/CollectionsPage.jsx';
 import SuppliersPage from './features/suppliers/SuppliersPage.jsx';
 import CustomersPage from './features/customers/CustomersPage.jsx';
+import AppLayout from './components/layout/AppLayout.jsx';
+import Sidebar from './components/layout/Sidebar.jsx';
+import Header from './components/layout/Header.jsx';
+import SidebarDrawer from './components/layout/SidebarDrawer.jsx';
+import Breadcrumbs from './components/layout/Breadcrumbs.jsx';
 import './styles/design-tokens.css';
 import './styles/utilities.css';
 
+// Feature flag: VITE_NEW_LAYOUT=true enables new layout (default: false)
+const USE_NEW_LAYOUT = import.meta.env.VITE_NEW_LAYOUT === 'true';
+// Feature flag: VITE_NEW_LOGIN=true enables new login page (default: false)
+const USE_NEW_LOGIN = import.meta.env.VITE_NEW_LOGIN === 'true';
+
+// Lazy-load the new login page to avoid bundle bloat when feature flag is off
+const NewLoginPage = lazy(() => import('./features/auth/LoginPage.tsx'));
+
 const NAV_ITEMS = [
-  { path: '/', label: 'Dashboard' },
-  { path: '/venta', label: 'Venta' },
-  { path: '/credit-sales', label: 'Venta a crédito' },
-  { path: '/apartados', label: 'Apartados' },
-  { path: '/payments', label: 'Pagos' },
-  { path: '/cobros', label: 'Cobranzas' },
-  { path: '/proveedores', label: 'Proveedores' },
-  { path: '/clientes', label: 'Clientes' },
-  { path: '/inventory', label: 'Inventario' },
+  { path: '/', label: 'Dashboard', icon: 'dashboard' },
+  { path: '/inventory', label: 'Inventario', icon: 'inventory' },
+  { path: '/clientes', label: 'Clientes', icon: 'users' },
+  { path: '/apartados', label: 'Apartados', icon: 'archive' },
+  { path: '/credit-sales', label: 'Venta a crédito', icon: 'credit-card' },
+  { path: '/venta', label: 'Venta', icon: 'shopping-cart' },
+  { path: '/cobros', label: 'Cobranzas', icon: 'dollar-sign' },
+  { path: '/proveedores', label: 'Proveedores', icon: 'truck' },
+  { path: '/payments', label: 'Pagos', icon: 'banknote' },
 ];
 
 function AppShell() {
@@ -40,6 +55,7 @@ function AppShell() {
   const location = useLocation();
 
   const [navOpen, setNavOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   async function handleLogout() {
     await logOut();
@@ -70,8 +86,59 @@ function AppShell() {
     }
   }, [data, config.businessName]);
 
+  // Build breadcrumbs from route hierarchy
+  const breadcrumbs = [
+    { label: 'Inicio', path: '/' },
+    ...NAV_ITEMS.filter(item => location.pathname.startsWith(item.path) && item.path !== '/')
+      .map(item => ({ label: item.label, path: item.path })),
+  ];
+
+  // For new layout, use AppLayout + Sidebar + Header + SidebarDrawer
+  if (USE_NEW_LAYOUT) {
+    return (
+      <AppLayout
+        sidebar={
+          <Sidebar
+            navItems={NAV_ITEMS}
+            userName={config.businessName}
+            userRole="Administrador"
+            onLogout={handleLogout}
+            collapsed={sidebarCollapsed}
+            onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+          />
+        }
+        header={
+          <Header
+            breadcrumbs={breadcrumbs}
+            userName={config.businessName}
+            userRole="Administrador"
+            onLogout={handleLogout}
+            onMenuClick={() => setNavOpen(true)}
+            onSidebarToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+            sidebarCollapsed={sidebarCollapsed}
+          />
+        }
+      >
+        {isError && (
+          <div className="alert alert-warning container" role="alert">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <span>No se pudo cargar la configuración del negocio; se muestran valores por defecto.</span>
+          </div>
+        )}
+        <div className="container">
+          <Outlet />
+        </div>
+      </AppLayout>
+    );
+  }
+
+  // Old layout (existing AppShell)
   return (
-    <div className="app-shell">
+    <div className="app-shell" data-testid="app-shell">
       <a href="#main-content" className="skip-link">
         Saltar al contenido principal
       </a>
@@ -204,9 +271,18 @@ export default function App() {
     document.title = config.businessName;
   }, [config.businessName]);
 
+  // Choose login page based on feature flag
+  const LoginPageComponent = USE_NEW_LOGIN ? (
+    <Suspense fallback={<div className="login-page"><div className="spinner" /></div>}>
+      <NewLoginPage />
+    </Suspense>
+  ) : (
+    <LoginPageLegacy />
+  );
+
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
+      <Route path="/login" element={LoginPageComponent} />
       <Route element={<RequireAuth />}>
         <Route element={<AppShell />}>
           <Route index element={<DashboardPage />} />
