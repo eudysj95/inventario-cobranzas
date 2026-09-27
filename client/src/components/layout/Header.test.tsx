@@ -22,9 +22,9 @@ vi.mock('../../api/config', () => ({
 // Mock useTheme hook
 vi.mock('../../hooks/useTheme', () => ({
   useTheme: () => ({
-    theme: 'system',
+    theme: 'dark',
     setTheme: vi.fn(),
-    resolvedTheme: 'light',
+    resolvedTheme: 'dark',
   }),
 }));
 
@@ -78,13 +78,6 @@ describe('Header', () => {
 
     // Last should be text (current page)
     expect(screen.getByText('Productos')).toBeInTheDocument();
-  });
-
-  it('renders theme toggle button', () => {
-    renderHeader();
-
-    const themeToggle = screen.getByRole('button', { name: /tema/i });
-    expect(themeToggle).toBeInTheDocument();
   });
 
   it('renders notifications bell', () => {

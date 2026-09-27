@@ -1,29 +1,20 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 
-type Theme = 'light' | 'dark' | 'system';
+/** Theme is locked to dark mode — no user toggle */
+type Theme = 'dark';
 
 interface ThemeContextValue {
   theme: Theme;
   setTheme: (theme: Theme) => void;
-  resolvedTheme: 'light' | 'dark';
+  resolvedTheme: 'dark';
 }
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
 /**
- * Get the initial theme from localStorage or default to 'system'
- */
-function getInitialTheme(): Theme {
-  if (typeof window !== 'undefined') {
-    return (localStorage.getItem('theme-preference') as Theme) || 'system';
-  }
-  return 'system';
-}
-
-/**
  * Apply the resolved theme to the document element
  */
-function applyTheme(resolved: 'light' | 'dark'): void {
+function applyTheme(resolved: 'dark'): void {
   if (typeof document !== 'undefined') {
     document.documentElement.setAttribute('data-theme', resolved);
   }
@@ -48,62 +39,21 @@ export function ThemeProvider({
   children: React.ReactNode;
   tenantDarkPalette?: Record<string, string>;
 }) {
-  const [theme, setThemeState] = useState<Theme>(getInitialTheme);
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
+  const [resolvedTheme] = useState<'dark'>('dark');
 
-  const setTheme = useCallback((newTheme: Theme) => {
-    setThemeState(newTheme);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('theme-preference', newTheme);
-    }
+  const setTheme = useCallback((_newTheme: Theme) => {
+    // No-op: theme is locked to dark
   }, []);
 
   useEffect(() => {
-    const updateResolvedTheme = () => {
-      let resolved: 'light' | 'dark';
-      if (theme === 'system') {
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        resolved = prefersDark ? 'dark' : 'light';
-      } else {
-        resolved = theme;
-      }
-      setResolvedTheme(resolved);
-      applyTheme(resolved);
-
-      // Inject tenant dark palette when in dark mode
-      if (resolved === 'dark' && tenantDarkPalette) {
-        injectTenantDarkPalette(tenantDarkPalette);
-      }
-    };
-
-    updateResolvedTheme();
-
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = () => {
-      if (theme === 'system') {
-        updateResolvedTheme();
-      }
-    };
-
-    // Use addEventListener for modern browsers
-    if (mediaQuery.addEventListener) {
-      mediaQuery.addEventListener('change', handleChange);
-    } else {
-      // Fallback for older browsers
-      mediaQuery.addListener?.(handleChange);
+    applyTheme('dark');
+    if (tenantDarkPalette) {
+      injectTenantDarkPalette(tenantDarkPalette);
     }
-
-    return () => {
-      if (mediaQuery.removeEventListener) {
-        mediaQuery.removeEventListener('change', handleChange);
-      } else {
-        mediaQuery.removeListener?.(handleChange);
-      }
-    };
-  }, [theme, tenantDarkPalette]);
+  }, [tenantDarkPalette]);
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme }}>
+    <ThemeContext.Provider value={{ theme: 'dark' as Theme, setTheme, resolvedTheme }}>
       {children}
     </ThemeContext.Provider>
   );
@@ -124,19 +74,8 @@ export function useTheme() {
 export function initializeTheme(tenantDarkPalette?: Record<string, string>): void {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
-  const stored = localStorage.getItem('theme-preference') as Theme | null;
-  const theme = stored || 'system';
-
-  let resolved: 'light' | 'dark';
-  if (theme === 'system') {
-    resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  } else {
-    resolved = theme;
-  }
-
-  applyTheme(resolved);
-
-  if (resolved === 'dark' && tenantDarkPalette) {
+  applyTheme('dark');
+  if (tenantDarkPalette) {
     injectTenantDarkPalette(tenantDarkPalette);
   }
 }

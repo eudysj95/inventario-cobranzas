@@ -10,7 +10,6 @@ import { Card, CardHeader, CardBody, CardFooter } from '../../components/ui/Card
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
-import { Avatar } from '../../components/ui/Avatar';
 import { Spinner } from '../../components/ui/Spinner';
 import { WhatsAppHub } from '../../components/whatsapp/WhatsAppHub';
 import { useToast } from '../../components/ui/Toast';
@@ -76,15 +75,16 @@ export default function LoginPage() {
           aria-label="Formulario de inicio de sesión"
         >
           <CardHeader className="text-center pb-4">
-            <div className="login-brand flex items-center justify-center gap-3" aria-label={businessName}>
-              <Avatar
+            <div className="login-brand flex flex-col items-center justify-center gap-2" aria-label={businessName}>
+              <img
                 src={logoUrl}
                 alt={businessName}
-                size="lg"
-                shape="circle"
+                className="login-logo"
+                width="14"
+                height="14"
                 aria-hidden="true"
               />
-              <span className="login-brand-name text-xl font-semibold">{businessName}</span>
+              <span className="login-brand-name text-lg font-semibold">{businessName}</span>
             </div>
           </CardHeader>
 

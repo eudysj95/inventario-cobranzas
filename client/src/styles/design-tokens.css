@@ -121,6 +121,10 @@
   --container-max: 1280px;
   --container-padding: var(--space-4);
 
+  /* === LAYOUT === */
+  --sidebar-width: 155px;
+  --sidebar-collapsed: 72px;
+
 /* === TENANT OVERRIDES (injected at runtime via /api/config) === */
   --tenant-primary: var(--color-primary);
   --tenant-primary-hover: var(--color-primary-hover);
