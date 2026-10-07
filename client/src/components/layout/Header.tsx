@@ -60,6 +60,18 @@ const ICONS = {
       <line x1="21" y1="12" x2="9" y2="12" />
     </svg>
   ),
+  // Nexo logo monogram (green gradient N mark)
+  logoMark: (
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true" role="img" aria-label="Nexo">
+      <defs>
+        <linearGradient id="nexoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#16a34a" />
+          <stop offset="100%" stopColor="#15803d" />
+        </linearGradient>
+      </defs>
+      <path d="M6 22V6h4l8 16h4V6h4" stroke="url(#nexoGradient)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+    </svg>
+  ),
 };
 
 export default function Header({
@@ -89,13 +101,16 @@ export default function Header({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isUserMenuOpen]);
 
-  const businessName = config?.businessName ?? 'Nexo';
+const businessName = config?.businessName ?? 'Nexo';
   const logoUrl = config?.logoUrl ?? '/logo-nexo.png';
+
+  // Notification count for badge (mock for now - would come from API)
+  const notificationCount = 3;
 
   return (
     <header className="header" data-testid="header" role="banner" style={{ height: 'var(--header-height)' }}>
       <div className="header-inner">
-        {/* Left: Mobile menu button + Sidebar toggle + Breadcrumbs */}
+        {/* Left: Mobile menu button + Sidebar toggle + Logo (mobile centered) + Breadcrumbs */}
         <div className="header-left">
           {/* Mobile hamburger */}
           {onMenuClick && (
@@ -111,6 +126,12 @@ export default function Header({
             </button>
           )}
 
+          {/* Logo - mobile centered, desktop left of breadcrumbs */}
+          <div className="header-logo hide-desktop" aria-label={businessName}>
+            {ICONS.logoMark}
+            <span className="header-logo-text">{businessName}</span>
+          </div>
+
           {/* Sidebar toggle for tablet/desktop */}
           {onSidebarToggle && (
             <button
@@ -123,6 +144,12 @@ export default function Header({
               {sidebarCollapsed ? ICONS.chevronRight : ICONS.chevronLeft}
             </button>
           )}
+
+          {/* Logo (desktop) - left of breadcrumbs */}
+          <div className="header-logo hide-mobile" aria-label={businessName}>
+            {ICONS.logoMark}
+            <span className="header-logo-text">{businessName}</span>
+          </div>
 
           {/* Breadcrumbs */}
           <nav className="breadcrumbs" data-testid="breadcrumbs" role="navigation" aria-label="Ruta de navegación">
@@ -168,8 +195,16 @@ export default function Header({
                 aria-expanded={isUserMenuOpen}
                 aria-haspopup="menu"
               >
-                <span className="user-avatar" aria-hidden="true">
-                  {ICONS.user}
+                <span className="user-avatar-wrapper" aria-hidden="true">
+                  <span className="user-avatar">
+                    {ICONS.user}
+                  </span>
+                  {/* Notification badge */}
+                  {notificationCount > 0 && (
+                    <span className="notification-badge" aria-label={`${notificationCount} notificaciones`}>
+                      {notificationCount > 9 ? '9+' : notificationCount}
+                    </span>
+                  )}
                 </span>
                 <span className="user-name hide-mobile">{userName}</span>
                 {ICONS.chevronDown}
