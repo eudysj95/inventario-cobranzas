@@ -1,0 +1,28 @@
+name: Visual Regression (Chromatic)
+
+on:
+  pull_request:
+    paths:
+      - 'client/src/**'
+      - 'client/.storybook/**'
+      - 'client/package.json'
+      - 'client/vite.config.js'
+
+jobs:
+  chromatic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      - run: cd client && bun install
+      - uses: chromaui/action@v1
+        with:
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          buildScriptName: build-storybook
+          exitZeroOnChanges: true
+          autoAcceptChanges: main
+          onlyChanged: true

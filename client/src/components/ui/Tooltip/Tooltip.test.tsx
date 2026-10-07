@@ -1,78 +1,79 @@
 import { describe, it, expect } from "vitest";
-import { render, screen, fireEvent, act } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { Tooltip } from "./Tooltip";
 
 describe("Tooltip", () => {
-  it("shows tooltip on hover", () => {
+  it("shows tooltip on hover", async () => {
     render(
-      <Tooltip content="Tooltip text">
+      <Tooltip content="Tooltip text" delay={0}>
         <button>Hover me</button>
       </Tooltip>
     );
     const button = screen.getByRole("button", { name: "Hover me" });
-    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    // Tooltip is portaled to document.body, not in container
+    expect(document.body.querySelector('[role="tooltip"]')).not.toBeInTheDocument();
 
     fireEvent.mouseEnter(button);
-    expect(screen.getByRole("tooltip")).toHaveTextContent("Tooltip text");
+    await waitFor(() => expect(document.body.querySelector('[role="tooltip"]')).toHaveTextContent("Tooltip text"));
   });
 
-  it("hides tooltip on mouse leave", () => {
+  it("hides tooltip on mouse leave", async () => {
     render(
-      <Tooltip content="Tooltip text">
+      <Tooltip content="Tooltip text" delay={0}>
         <button>Hover me</button>
       </Tooltip>
     );
     const button = screen.getByRole("button", { name: "Hover me" });
     fireEvent.mouseEnter(button);
-    expect(screen.getByRole("tooltip")).toBeInTheDocument();
+    await waitFor(() => expect(document.body.querySelector('[role="tooltip"]')).toBeInTheDocument());
 
     fireEvent.mouseLeave(button);
-    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    await waitFor(() => expect(document.body.querySelector('[role="tooltip"]')).not.toBeInTheDocument());
   });
 
-  it("shows tooltip on focus", () => {
+  it("shows tooltip on focus", async () => {
     render(
-      <Tooltip content="Tooltip text">
+      <Tooltip content="Tooltip text" delay={0}>
         <button>Focus me</button>
       </Tooltip>
     );
     const button = screen.getByRole("button", { name: "Focus me" });
     fireEvent.focus(button);
-    expect(screen.getByRole("tooltip")).toHaveTextContent("Tooltip text");
+    await waitFor(() => expect(document.body.querySelector('[role="tooltip"]')).toHaveTextContent("Tooltip text"));
   });
 
-  it("hides tooltip on blur", () => {
+  it("hides tooltip on blur", async () => {
     render(
-      <Tooltip content="Tooltip text">
+      <Tooltip content="Tooltip text" delay={0}>
         <button>Focus me</button>
       </Tooltip>
     );
     const button = screen.getByRole("button", { name: "Focus me" });
     fireEvent.focus(button);
-    expect(screen.getByRole("tooltip")).toBeInTheDocument();
+    await waitFor(() => expect(document.body.querySelector('[role="tooltip"]')).toBeInTheDocument());
 
     fireEvent.blur(button);
-    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    await waitFor(() => expect(document.body.querySelector('[role="tooltip"]')).not.toBeInTheDocument());
   });
 
-  it("applies position classes correctly", () => {
+  it("applies position classes correctly", async () => {
     const { rerender } = render(
-      <Tooltip content="Top" position="top"><button>Btn</button></Tooltip>
+      <Tooltip content="Top" position="top" delay={0}><button>Btn</button></Tooltip>
     );
     fireEvent.mouseEnter(screen.getByRole("button"));
-    expect(screen.getByRole("tooltip")).toHaveClass("top");
+    await waitFor(() => expect(document.body.querySelector('[role="tooltip"]')).toHaveClass("tooltip-top"));
 
-    rerender(<Tooltip content="Bottom" position="bottom"><button>Btn</button></Tooltip>);
+    rerender(<Tooltip content="Bottom" position="bottom" delay={0}><button>Btn</button></Tooltip>);
     fireEvent.mouseEnter(screen.getByRole("button"));
-    expect(screen.getByRole("tooltip")).toHaveClass("bottom");
+    await waitFor(() => expect(document.body.querySelector('[role="tooltip"]')).toHaveClass("tooltip-bottom"));
 
-    rerender(<Tooltip content="Left" position="left"><button>Btn</button></Tooltip>);
+    rerender(<Tooltip content="Left" position="left" delay={0}><button>Btn</button></Tooltip>);
     fireEvent.mouseEnter(screen.getByRole("button"));
-    expect(screen.getByRole("tooltip")).toHaveClass("left");
+    await waitFor(() => expect(document.body.querySelector('[role="tooltip"]')).toHaveClass("tooltip-left"));
 
-    rerender(<Tooltip content="Right" position="right"><button>Btn</button></Tooltip>);
+    rerender(<Tooltip content="Right" position="right" delay={0}><button>Btn</button></Tooltip>);
     fireEvent.mouseEnter(screen.getByRole("button"));
-    expect(screen.getByRole("tooltip")).toHaveClass("right");
+    await waitFor(() => expect(document.body.querySelector('[role="tooltip"]')).toHaveClass("tooltip-right"));
   });
 
   it("renders children correctly", () => {

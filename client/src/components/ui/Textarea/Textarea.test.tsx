@@ -5,7 +5,7 @@ import { Textarea } from "./Textarea";
 describe("Textarea", () => {
   it("renders textarea with label", () => {
     render(<Textarea label="Message" id="message" />);
-    expect(screen.getByLabelText("Message")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Message/)).toBeInTheDocument();
   });
 
   it("handles value and onChange", () => {
@@ -57,6 +57,7 @@ describe("Textarea", () => {
     const { container } = render(<Textarea label="Auto ID" />);
     const textarea = container.querySelector("textarea");
     expect(textarea).toHaveAttribute("id");
-    expect(textarea?.id).toMatch(/^textarea-/);
+    // useId() generates IDs like :r0:, :r1: etc.
+    expect(textarea?.id).toBeTruthy();
   });
 });

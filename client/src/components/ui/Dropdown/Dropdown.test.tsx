@@ -70,7 +70,8 @@ describe("Dropdown", () => {
     render(<Dropdown trigger={<button>Menu</button>} items={items} />);
     fireEvent.click(screen.getByRole("button", { name: "Menu" }));
     expect(screen.getByRole("menu")).toBeInTheDocument();
-    fireEvent.click(document.body);
+    // Component listens for mousedown, not click
+    fireEvent.mouseDown(document.body);
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 });

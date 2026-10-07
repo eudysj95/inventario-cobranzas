@@ -1,17 +1,15 @@
 // Dashboard page — ultra-compact single-screen overview.
 // Everything fits in one viewport without scroll.
-// Nexo design system: ultra-tight grid, minimal cards, micro charts via recharts.
+// Nexo design system: ultra-tight grid, minimal cards, micro charts via MicroCharts primitives.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { NavLink } from 'react-router-dom';
 import { DEFAULT_CONFIG, useConfig } from '../../api/config.js';
 import { useDashboardStats } from '../../api/dashboard.js';
 import { formatCurrency, formatDate } from '../../lib/format.js';
-import {
-  AreaChart, Area, BarChart, Bar,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  Cell,
-} from 'recharts';
+import { MicroLineChart, MicroBarChart, MicroAreaChart } from './MicroCharts';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
+import { Skeleton } from '../../components/ui/Skeleton';
 
 export default function DashboardPage() {
   const { data: configData } = useConfig();
@@ -20,10 +18,25 @@ export default function DashboardPage() {
 
   const [refreshKey, setRefreshKey] = useState(0);
 
+  // Auto-refresh every 30 seconds
   useEffect(() => {
-    const interval = setInterval(() => setRefreshKey(k => k + 1), 60000);
+    const interval = setInterval(() => setRefreshKey(k => k + 1), 30000);
     return () => clearInterval(interval);
   }, []);
+
+  // Pull-to-refresh for mobile
+  const { isPulling, pullDistance, isRefreshing, onTouchStart, onTouchMove, onTouchEnd } = usePullToRefresh({
+    onRefresh: async () => {
+      await refetch();
+      setRefreshKey(k => k + 1);
+    },
+    threshold: 60,
+  });
+
+  const handleRefresh = useCallback(() => {
+    refetch();
+    setRefreshKey(k => k + 1);
+  }, [refetch]);
 
   if (isPending) return <DashboardSkeleton />;
   if (isError) return <DashboardError onRetry={() => refetch()} />;
@@ -31,35 +44,122 @@ export default function DashboardPage() {
   const stats = data ?? {};
 
   return (
-    <section style={{ padding: 'var(--space-2) 0', maxHeight: 'calc(100vh - var(--space-8))', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+    <section
+      data-testid="dashboard-root"
+      data-density="compact"
+      className="dashboard-root"
+      style={{
+        padding: 'var(--dash-space-2) 0',
+        maxHeight: 'calc(100vh - var(--space-8))',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
+      {/* Pull-to-refresh indicator */}
+      {(isPulling || isRefreshing) && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 'var(--dash-space-3)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'var(--color-primary-light)',
+            color: 'var(--color-primary)',
+            fontSize: 'var(--dash-text-base)',
+            fontWeight: 600,
+            zIndex: 100,
+            transform: `translateY(${isPulling ? Math.min(pullDistance * 0.5, 30) : 0}px)`,
+            transition: 'transform 0.1s ease-out',
+          }}
+        >
+          {isRefreshing ? (
+            <span>Actualizando... <Skeleton variant="circular" width="12px" height="12px" className="inline-block ml-1" /></span>
+          ) : (
+            `Suelta para actualizar (${Math.round(pullDistance)}px)`
+          )}
+        </div>
+      )}
+
       <header className="flex items-center justify-between gap-1 mb-2 flex-wrap" style={{ alignItems: 'center' }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 'var(--text-lg)', fontWeight: 'var(--font-weight-semibold)' }}>Dashboard</h1>
+          <h1
+            style={{
+              margin: 0,
+              fontSize: 'var(--dash-text-lg)',
+              fontWeight: 'var(--font-weight-semibold)',
+            }}
+          >
+            Dashboard
+          </h1>
           <p className="form-hint" style={{ marginTop: '0', fontSize: '10px', lineHeight: 1 }}>
             Actualizado {new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
           </p>
         </div>
-        <button type="button" onClick={() => refetch()} className="btn btn-secondary" disabled={isPending} style={{ padding: '2px 8px', fontSize: '9px', minHeight: '24px' }}>
+        <button
+          type="button"
+          onClick={handleRefresh}
+          className="btn btn-secondary"
+          disabled={isPending || isRefreshing}
+          style={{ padding: '2px 8px', fontSize: '9px', minHeight: '24px' }}
+        >
           ⟳
         </button>
       </header>
 
       {/* KPI Cards Row - 4 cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-1 mb-1">
+      <div data-testid="kpi-row" className="grid grid-cols-2 lg:grid-cols-4 mb-1" style={{ gap: 'var(--dash-gap)' }}>
         <MicroKPI title="Ventas hoy" value={formatCurrency(stats.sales?.today ?? 0, config)} subtitle={`Ef ${formatCurrency(stats.sales?.cashToday ?? 0, config)} · Cr ${formatCurrency(stats.sales?.creditToday ?? 0, config)}`} icon="💰" trend={stats.sales?.today > 0 ? 'up' : 'neutral'} />
         <MicroKPI title="Stock bajo" value={stats.inventory?.lowStock ?? 0} subtitle={`${stats.inventory?.outOfStock ?? 0} sin · Tot ${formatCurrency(stats.inventory?.totalValue ?? 0, config)}`} icon="📦" trend={stats.inventory?.lowStock > 0 ? 'down' : 'up'} />
         <MicroKPI title="Cobrar urg" value={stats.collections?.overdueToday ?? 0} subtitle={`+3d ${stats.collections?.dueNext3Days ?? 0} · S/tel ${stats.collections?.withoutPhone ?? 0}`} icon="📞" trend={stats.collections?.overdueToday > 0 ? 'down' : 'up'} />
         <MicroKPI title="Proveedores" value={stats.suppliers?.overdue ?? 0} subtitle={`+7d ${stats.suppliers?.dueNext7Days ?? 0} · Ab ${stats.suppliers?.openDebts ?? 0}`} icon="🏪" trend={stats.suppliers?.overdue > 0 ? 'down' : 'up'} />
       </div>
 
-      {/* Charts Row - 2 mini charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-1 mb-1">
-        <MicroCard title="Ventas 7d" $chart><MicroSalesChart /></MicroCard>
-        <MicroCard title="Top 5 prod (30d)" $chart><MicroTopProductsChart /></MicroCard>
+      {/* Charts Row - 2 mini charts using new primitives */}
+      <div data-testid="charts-row" className="grid grid-cols-1 lg:grid-cols-2 mb-1" style={{ gap: 'var(--dash-gap)' }}>
+        <MicroCard title="Ventas 7d" $chart>
+          <MicroAreaChart
+            data={[
+              { day: 'Lun', cash: 12000, credit: 8000 },
+              { day: 'Mar', cash: 18000, credit: 12000 },
+              { day: 'Mié', cash: 15000, credit: 9000 },
+              { day: 'Jue', cash: 22000, credit: 15000 },
+              { day: 'Vie', cash: 25000, credit: 18000 },
+              { day: 'Sáb', cash: 30000, credit: 20000 },
+              { day: 'Dom', cash: 28000, credit: 19000 },
+            ]}
+            xKey="day"
+            series={[
+              { key: 'cash', color: 'var(--color-primary)' },
+              { key: 'credit', color: 'var(--color-success)' },
+            ]}
+          />
+        </MicroCard>
+        <MicroCard title="Top 5 prod (30d)" $chart>
+          <MicroBarChart
+            data={[
+              { name: 'Remera negra M', units: 45, color: 'var(--color-primary)' },
+              { name: 'Jean azul 32', units: 38, color: 'var(--color-success)' },
+              { name: 'Zapatilla blanca 40', units: 32, color: 'var(--color-warning)' },
+              { name: 'Buzo gris L', units: 28, color: 'var(--color-info)' },
+              { name: 'Short negro M', units: 22, color: 'var(--color-danger)' },
+            ]}
+            xKey="name"
+            yKey="units"
+            layout="vertical"
+          />
+        </MicroCard>
       </div>
 
       {/* Lists Row - 2 compact lists */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-1 mb-1">
+      <div data-testid="lists-row" className="grid grid-cols-1 lg:grid-cols-2 mb-1" style={{ gap: 'var(--dash-gap)' }}>
         <MicroCard title="Ventas recientes"><MicroRecentSales sales={stats.recentSales ?? []} config={config} /></MicroCard>
         <MicroCard title="Atención"><MicroUrgentItems stats={stats} /></MicroCard>
       </div>
@@ -74,11 +174,11 @@ export default function DashboardPage() {
 function MicroKPI({ title, value, subtitle, icon, trend }) {
   const trendColors = { up: 'var(--color-success)', down: 'var(--color-danger)', neutral: 'var(--color-text-secondary)' };
   return (
-    <div className="card" style={{ minHeight: 0 }}>
-      <div className="card-body" style={{ padding: '4px 8px' }}>
+    <div data-testid="kpi-card" className="card" style={{ minHeight: 0 }}>
+      <div className="card-body" style={{ padding: 'var(--dash-card-padding)' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '4px' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: '0 0 2px', fontSize: '9px', fontWeight: 600, color: 'var(--color-text-secondary)', lineHeight: 1.1 }}>{title}</p>
+            <p style={{ margin: '0 0 2px', fontSize: 'var(--dash-text-base)', fontWeight: 600, color: 'var(--color-text-secondary)', lineHeight: 1.1 }}>{title}</p>
             <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: 'var(--color-text)', lineHeight: 1.15 }}>{value}</p>
             <p style={{ margin: '1px 0 0', fontSize: '8px', color: 'var(--color-text-secondary)', lineHeight: 1.1 }}>{subtitle}</p>
           </div>
@@ -89,8 +189,8 @@ function MicroKPI({ title, value, subtitle, icon, trend }) {
             display: 'inline-flex', alignItems: 'center', gap: '2px',
             padding: '0 4px', borderRadius: '999px',
             fontSize: '7px', fontWeight: 600,
-            background: `${({ up: 'var(--color-success)', down: 'var(--color-danger)', neutral: 'var(--color-text-secondary)' }[trend])}20`,
-            color: { up: 'var(--color-success)', down: 'var(--color-danger)', neutral: 'var(--color-text-secondary)' }[trend],
+            background: `${trendColors[trend]}20`,
+            color: trendColors[trend],
           }}>
             {trend === 'up' ? '↑' : trend === 'down' ? '↓' : '—'} {trend === 'up' ? 'Bien' : trend === 'down' ? 'Atención' : 'OK'}
           </span>
@@ -104,80 +204,37 @@ function MicroKPI({ title, value, subtitle, icon, trend }) {
 function MicroCard({ title, children, $chart = false }) {
   return (
     <div className="card" style={{ minHeight: 0 }}>
-      <div className="card-header" style={{ padding: '3px 8px', borderBottom: '1px solid var(--color-border)' }}>
-        <h3 style={{ margin: 0, fontSize: '9px', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{title}</h3>
+      <div
+        className="card-header"
+        style={{
+          padding: 'var(--dash-space-1) var(--dash-space-2)',
+          borderBottom: '1px solid var(--color-border)',
+        }}
+      >
+        <h3
+          style={{
+            margin: 0,
+            fontSize: 'var(--dash-text-base)',
+            fontWeight: 600,
+            color: 'var(--color-text-secondary)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.03em',
+          }}
+        >
+          {title}
+        </h3>
       </div>
-      <div className="card-body" style={{ padding: '4px 8px', minHeight: $chart ? undefined : 0, overflow: $chart ? 'visible' : 'hidden' }}>
+      <div
+        className="card-body"
+        style={{
+          padding: 'var(--dash-space-1) var(--dash-space-2)',
+          minHeight: $chart ? undefined : 0,
+          overflow: $chart ? 'visible' : 'hidden',
+        }}
+      >
         {children}
       </div>
     </div>
-  );
-}
-
-/** Micro Sales Chart - 90px height */
-function MicroSalesChart() {
-  const today = new Date();
-  const data = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date(today);
-    date.setDate(date.getDate() - (6 - i));
-    return {
-      day: date.toLocaleDateString('es-AR', { weekday: 'short' }),
-      cash: Math.floor(Math.random() * 50000) + 10000,
-      credit: Math.floor(Math.random() * 30000) + 5000,
-    };
-  });
-
-  return (
-    <ResponsiveContainer width="100%" height="90px">
-      <AreaChart data={data} margin={{ top: 2, right: 5, left: -5, bottom: -8 }}>
-        <defs>
-          <linearGradient id="colorCash" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.3}/>
-            <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0}/>
-          </linearGradient>
-          <linearGradient id="colorCredit" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="var(--color-success)" stopOpacity={0.3}/>
-            <stop offset="95%" stopColor="var(--color-success)" stopOpacity={0}/>
-          </linearGradient>
-        </defs>
-        <CartesianGrid strokeDasharray="2 2" stroke="var(--color-border)" vertical={false} horizontal={true} />
-        <XAxis dataKey="day" stroke="var(--color-text-secondary)" fontSize={8} tickLine={false} axisLine={false} />
-        <YAxis stroke="var(--color-text-secondary)" fontSize={8} tickLine={false} axisLine={false} tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
-        <Tooltip
-          contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '3px', fontSize: '8px' }}
-          labelStyle={{ color: 'var(--color-text)', fontWeight: 600, fontSize: '8px' }}
-          itemStyle={{ fontSize: '8px' }}
-          formatter={(value) => [formatCurrency(value, { currencySymbol: '$', currencyLocale: 'es-AR' })]}
-        />
-        <Area type="monotone" dataKey="cash" stackId="1" fill="url(#colorCash)" stroke="var(--color-primary)" strokeWidth={1.5} />
-        <Area type="monotone" dataKey="credit" stackId="1" fill="url(#colorCredit)" stroke="var(--color-success)" strokeWidth={1.5} />
-      </AreaChart>
-    </ResponsiveContainer>
-  );
-}
-
-/** Micro Top Products Chart - 90px height */
-function MicroTopProductsChart() {
-  const data = [
-    { name: 'Remera negra M', units: 45, color: 'var(--color-primary)' },
-    { name: 'Jean azul 32', units: 38, color: 'var(--color-success)' },
-    { name: 'Zapatilla blanca 40', units: 32, color: 'var(--color-warning)' },
-    { name: 'Buzo gris L', units: 28, color: 'var(--color-info)' },
-    { name: 'Short negro M', units: 22, color: 'var(--color-danger)' },
-  ];
-
-  return (
-    <ResponsiveContainer width="100%" height="90px">
-      <BarChart data={data} layout="vertical" margin={{ top: 2, right: 2, left: -5, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="2 2" stroke="var(--color-border)" horizontal={false} />
-        <XAxis type="number" stroke="var(--color-text-secondary)" fontSize={7} tickLine={false} axisLine={false} />
-        <YAxis type="category" dataKey="name" width={80} stroke="var(--color-text-secondary)" fontSize={8} tickLine={false} axisLine={false} />
-        <Tooltip contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '3px', fontSize: '8px' }} formatter={(value) => [value, 'und']} />
-        <Bar dataKey="units" radius={[0, 2, 2, 0]} barSize={16}>
-          {data.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
-        </Bar>
-      </BarChart>
-    </ResponsiveContainer>
   );
 }
 
@@ -280,26 +337,79 @@ function MicroQuickActions({ actions }) {
   );
 }
 
-/** Skeleton */
+/** Skeleton loading state using new Skeleton primitive */
 function DashboardSkeleton() {
   return (
-    <section style={{ padding: 'var(--space-2) 0', maxHeight: 'calc(100vh - var(--space-8))', overflow: 'hidden' }}>
-      <header className="flex items-center justify-between gap-1 mb-2"><div className="skeleton" style={{ width: '80px', height: '16px', borderRadius: '3px' }} /></header>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-1 mb-1">{[1,2,3,4].map(i => <MicroSkeleton key={i} />)}</div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-1 mb-1"><MicroSkeletonChart /><MicroSkeletonChart /></div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-1 mb-1"><MicroSkeletonList /><MicroSkeletonList /></div>
+    <section style={{ padding: 'var(--dash-space-2) 0', maxHeight: 'calc(100vh - var(--space-8))', overflow: 'hidden' }}>
+      <header className="flex items-center justify-between gap-1 mb-2">
+        <Skeleton variant="text" width="80px" height="16px" />
+      </header>
+      <div className="grid grid-cols-2 lg:grid-cols-4 mb-1" style={{ gap: 'var(--dash-gap)' }}>
+        {[1, 2, 3, 4].map(i => <MicroSkeleton key={i} />)}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 mb-1" style={{ gap: 'var(--dash-gap)' }}>
+        <MicroSkeletonChart />
+        <MicroSkeletonChart />
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 mb-1" style={{ gap: 'var(--dash-gap)' }}>
+        <MicroSkeletonList />
+        <MicroSkeletonList />
+      </div>
       <MicroSkeletonCard />
     </section>
   );
 }
 
 function MicroSkeleton() {
-  return <div className="card"><div style={{ padding: '4px 8px' }}><div className="skeleton" style={{ width: '50%', height: '8px', borderRadius: '2px', marginBottom: '2px' }} /><div className="skeleton" style={{ width: '40%', height: '12px', borderRadius: '2px' }} /></div></div>;
+  return (
+    <div className="card">
+      <div style={{ padding: 'var(--dash-card-padding)' }}>
+        <Skeleton variant="text" width="50%" height="8px" style={{ marginBottom: 'var(--dash-space-1)' }} />
+        <Skeleton variant="text" width="40%" height="12px" />
+      </div>
+    </div>
+  );
 }
-function MicroSkeletonChart() { return <div className="card"><div className="skeleton" style={{ height: '90px', borderRadius: '3px', padding: '4px 8px' }} /></div>; }
-function MicroSkeletonList() { return <div className="card"><div className="skeleton" style={{ height: '120px', borderRadius: '3px', padding: '4px 8px' }} /></div>; }
-function MicroSkeletonCard() { return <div className="card"><div className="skeleton" style={{ height: '70px', borderRadius: '3px', padding: '4px 8px' }} /></div>; }
+
+function MicroSkeletonChart() {
+  return (
+    <div className="card">
+      <div style={{ padding: 'var(--dash-space-1) var(--dash-space-2)' }}>
+        <Skeleton variant="rectangular" height="var(--dash-chart-height)" width="100%" />
+      </div>
+    </div>
+  );
+}
+
+function MicroSkeletonList() {
+  return (
+    <div className="card">
+      <div style={{ padding: 'var(--dash-space-1) var(--dash-space-2)' }}>
+        <Skeleton variant="rectangular" height="120px" width="100%" />
+      </div>
+    </div>
+  );
+}
+
+function MicroSkeletonCard() {
+  return (
+    <div className="card">
+      <div style={{ padding: 'var(--dash-space-1) var(--dash-space-2)' }}>
+        <Skeleton variant="rectangular" height="70px" width="100%" />
+      </div>
+    </div>
+  );
+}
 
 function DashboardError({ onRetry }) {
-  return <div className="card" style={{ minHeight: 0 }}><div style={{ padding: '12px', textAlign: 'center' }}><div className="skeleton" style={{ width: '24px', height: '24px', borderRadius: '50%', margin: '0 auto 4px', background: 'var(--color-danger-light)' }} /><h3 style={{ margin: '0 0 2px', color: 'var(--color-danger)', fontSize: '9px' }}>Error</h3><p style={{ fontSize: '8px', color: 'var(--color-text-secondary)', margin: '0 0 4px' }}>No se cargaron stats</p><button onClick={onRetry} style={{ padding: '2px 8px', fontSize: '8px', minHeight: '24px' }} className="btn btn-primary">Reintentar</button></div></div>;
+  return (
+    <div className="card" style={{ minHeight: 0 }}>
+      <div style={{ padding: '12px', textAlign: 'center' }}>
+        <div className="skeleton" style={{ width: '24px', height: '24px', borderRadius: '50%', margin: '0 auto 4px', background: 'var(--color-danger-light)' }} />
+        <h3 style={{ margin: '0 0 2px', color: 'var(--color-danger)', fontSize: '9px' }}>Error</h3>
+        <p style={{ fontSize: '8px', color: 'var(--color-text-secondary)', margin: '0 0 4px' }}>No se cargaron stats</p>
+        <button onClick={onRetry} style={{ padding: '2px 8px', fontSize: '8px', minHeight: '24px' }} className="btn btn-primary">Reintentar</button>
+      </div>
+    </div>
+  );
 }

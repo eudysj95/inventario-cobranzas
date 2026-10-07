@@ -39,8 +39,10 @@ describe("Badge", () => {
 
   it("applies dot indicator when dot prop is true", () => {
     render(<Badge dot>Active</Badge>);
-    expect(screen.getByText("Active").closest(".chip")).toHaveClass("flex");
-    expect(screen.getByText("Active").closest(".chip")?.querySelector("::before")).toBeTruthy();
+    const badge = screen.getByText("Active").closest(".chip");
+    expect(badge).toHaveClass("flex");
+    // Dot is a span with bg-current, not a pseudo-element
+    expect(badge?.querySelector("span")).toBeInTheDocument();
   });
 
   it("forwards ref correctly", () => {
