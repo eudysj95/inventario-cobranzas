@@ -7,9 +7,9 @@
      No brand-specific hues — only universal meaning. */
 
   /* Primary = Main actions, links, focus, active nav */
-  --color-primary: #047857;
-  --color-primary-hover: #065f46;
-  --color-primary-light: #d1fae5;
+  --color-primary: #16a34a;
+  --color-primary-hover: #15803d;
+  --color-primary-light: #dcfce7;
   --color-primary-text: #ffffff;
 
   /* Success = Confirmed, paid, available, OK */
@@ -121,11 +121,7 @@
   --container-max: 1280px;
   --container-padding: var(--space-4);
 
-  /* === LAYOUT === */
-  --sidebar-width: 155px;
-  --sidebar-collapsed: 72px;
-
-/* === TENANT OVERRIDES (injected at runtime via /api/config) === */
+ /* === TENANT OVERRIDES (injected at runtime via /api/config) === */
   --tenant-primary: var(--color-primary);
   --tenant-primary-hover: var(--color-primary-hover);
   --tenant-primary-light: var(--color-primary-light);
@@ -159,7 +155,7 @@
     --color-text: #f3f4f6;
     --color-text-secondary: #9ca3af;
     --color-text-muted: #6b7280;
-    --color-primary-light: #064e3b;
+    --color-primary-light: #14532d;
     --color-success-light: #14532d;
     --color-warning-light: #713f12;
     --color-danger-light: #7f1d1d;

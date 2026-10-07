@@ -34,8 +34,8 @@ describe('generate-css.mjs', () => {
     assert.ok(css.includes(':root {'));
     
     // Check color tokens
-    assert.ok(css.includes('--color-primary: #047857;'));
-    assert.ok(css.includes('--color-primary-hover: #065f46;'));
+    assert.ok(css.includes('--color-primary: #16a34a;'));
+    assert.ok(css.includes('--color-primary-hover: #15803d;'));
     assert.ok(css.includes('--color-success: #2e7d32;'));
     assert.ok(css.includes('--color-warning: #f9a825;'));
     assert.ok(css.includes('--color-danger: #d32f2f;'));

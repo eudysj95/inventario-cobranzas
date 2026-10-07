@@ -14,9 +14,9 @@ describe('parse-tokens.mjs', () => {
     const tokens = parseTokensFromCSS(cssContent);
     
     assert.ok(tokens.color);
-    assert.equal(tokens.color.primary.value, '#047857');
+    assert.equal(tokens.color.primary.value, '#16a34a');
     assert.equal(tokens.color.primary.type, 'color');
-    assert.equal(tokens.color.primaryHover.value, '#065f46');
+    assert.equal(tokens.color.primaryHover.value, '#15803d');
     assert.equal(tokens.color.success.value, '#2e7d32');
     assert.equal(tokens.color.warning.value, '#f9a825');
     assert.equal(tokens.color.danger.value, '#d32f2f');
@@ -174,7 +174,7 @@ describe('parse-tokens.mjs', () => {
     assert.equal(tokens.darkMode.text.value, '#f3f4f6');
     assert.equal(tokens.darkMode.textSecondary.value, '#9ca3af');
     assert.equal(tokens.darkMode.textMuted.value, '#6b7280');
-    assert.equal(tokens.darkMode.primaryLight.value, '#064e3b');
+    assert.equal(tokens.darkMode.primaryLight.value, '#14532d');
     assert.equal(tokens.darkMode.successLight.value, '#14532d');
     assert.equal(tokens.darkMode.warningLight.value, '#713f12');
     assert.equal(tokens.darkMode.dangerLight.value, '#7f1d1d');
