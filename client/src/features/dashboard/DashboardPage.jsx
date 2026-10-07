@@ -1,13 +1,10 @@
-// Dashboard page — ultra-compact single-screen overview.
-// Everything fits in one viewport without scroll.
-// Nexo design system: ultra-tight grid, minimal cards, micro charts via MicroCharts primitives.
-
+// Dashboard page — redesigned per mockup: KPI scroll strip, chart card, movements list
 import { useEffect, useState, useCallback } from 'react';
 import { NavLink } from 'react-router-dom';
 import { DEFAULT_CONFIG, useConfig } from '../../api/config.js';
 import { useDashboardStats } from '../../api/dashboard.js';
 import { formatCurrency, formatDate } from '../../lib/format.js';
-import { MicroLineChart, MicroBarChart, MicroAreaChart } from './MicroCharts';
+import { MicroBarChart } from './MicroCharts';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import { Skeleton } from '../../components/ui/Skeleton';
 
@@ -43,17 +40,43 @@ export default function DashboardPage() {
 
   const stats = data ?? {};
 
+  // Derived data for mockup KPIs
+  const ventasDelDia = stats.sales?.today ?? 0;
+  const cuentasPorCobrar = (stats.collections?.overdueToday ?? 0) + (stats.collections?.dueNext3Days ?? 0) + (stats.customers?.totalBalance ?? 0);
+  const valorInventario = stats.inventory?.totalValue ?? 0;
+
+  // Mock 7-day income data for chart (API doesn't provide daily breakdown yet)
+  const income7Days = [
+    { day: 'Lun', income: 12000 },
+    { day: 'Mar', income: 18000 },
+    { day: 'Mié', income: 15000 },
+    { day: 'Jue', income: 22000 },
+    { day: 'Vie', income: 25000 },
+    { day: 'Sáb', income: 30000 },
+    { day: 'Dom', income: 28000 },
+  ];
+
+  // Mock recent movements for "Últimos movimientos" list
+  const recentMovements = [
+    { type: 'rendimiento', title: 'Rendimiento', amount: 1275.00, cantidad: 'USD', precio: 0.00, iconColor: 'green' },
+    { type: 'cobranzas', title: 'Cobranzas', amount: 1685.00, cantidad: 'VES', precio: 0.00, iconColor: 'blue' },
+    { type: 'venta', title: 'Venta: Producto A', amount: 950.00, cantidad: 30.00, precio: 1.75, currency: 'VES', iconColor: 'green' },
+    { type: 'abono', title: 'Abono: Cliente B', amount: 300.00, cantidad: 30.00, precio: 'AS 30.00', iconColor: 'blue' },
+    { type: 'gasto', title: 'Gasto: Oficina', amount: 150.00, cantidad: 50.00, precio: 12.00, currency: 'VES', iconColor: 'red' },
+    { type: 'venta', title: 'Venta: Producto A', amount: 200.00, cantidad: 30.00, iconColor: 'green' },
+  ];
+
   return (
     <section
       data-testid="dashboard-root"
-      data-density="compact"
       className="dashboard-root"
       style={{
         padding: 'var(--dash-space-2) 0',
         maxHeight: 'calc(100vh - var(--space-8))',
-        overflow: 'hidden',
+        overflow: 'auto',
         display: 'flex',
         flexDirection: 'column',
+        gap: 'var(--dash-gap)',
       }}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
@@ -88,327 +111,242 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <header className="flex items-center justify-between gap-1 mb-2 flex-wrap" style={{ alignItems: 'center' }}>
+      {/* Page Header */}
+      <header className="flex items-center justify-between gap-2 mb-1" style={{ alignItems: 'center', flexWrap: 'wrap' }}>
         <div>
           <h1
             style={{
               margin: 0,
-              fontSize: 'var(--dash-text-lg)',
-              fontWeight: 'var(--font-weight-semibold)',
+              fontSize: 'var(--dash-text-xl)',
+              fontWeight: 'var(--font-weight-bold)',
+              color: 'var(--color-text)',
             }}
           >
             Dashboard
           </h1>
-          <p className="form-hint" style={{ marginTop: '0', fontSize: '10px', lineHeight: 1 }}>
-            Actualizado {new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-          </p>
         </div>
         <button
           type="button"
           onClick={handleRefresh}
           className="btn btn-secondary"
           disabled={isPending || isRefreshing}
-          style={{ padding: '2px 8px', fontSize: '9px', minHeight: '24px' }}
+          style={{ padding: 'var(--space-1) var(--space-2)', fontSize: 'var(--text-sm)', minHeight: 'var(--touch-target-sm)' }}
         >
           ⟳
         </button>
       </header>
 
-      {/* KPI Cards Row - 4 cards */}
-      <div data-testid="kpi-row" className="grid grid-cols-2 lg:grid-cols-4 mb-1" style={{ gap: 'var(--dash-gap)' }}>
-        <MicroKPI title="Ventas hoy" value={formatCurrency(stats.sales?.today ?? 0, config)} subtitle={`Ef ${formatCurrency(stats.sales?.cashToday ?? 0, config)} · Cr ${formatCurrency(stats.sales?.creditToday ?? 0, config)}`} icon="💰" trend={stats.sales?.today > 0 ? 'up' : 'neutral'} />
-        <MicroKPI title="Stock bajo" value={stats.inventory?.lowStock ?? 0} subtitle={`${stats.inventory?.outOfStock ?? 0} sin · Tot ${formatCurrency(stats.inventory?.totalValue ?? 0, config)}`} icon="📦" trend={stats.inventory?.lowStock > 0 ? 'down' : 'up'} />
-        <MicroKPI title="Cobrar urg" value={stats.collections?.overdueToday ?? 0} subtitle={`+3d ${stats.collections?.dueNext3Days ?? 0} · S/tel ${stats.collections?.withoutPhone ?? 0}`} icon="📞" trend={stats.collections?.overdueToday > 0 ? 'down' : 'up'} />
-        <MicroKPI title="Proveedores" value={stats.suppliers?.overdue ?? 0} subtitle={`+7d ${stats.suppliers?.dueNext7Days ?? 0} · Ab ${stats.suppliers?.openDebts ?? 0}`} icon="🏪" trend={stats.suppliers?.overdue > 0 ? 'down' : 'up'} />
+      {/* KPI Scroll Strip (mobile) / Row (desktop) */}
+      <div
+        data-testid="kpi-strip"
+        className="kpi-strip"
+        style={{
+          display: 'flex',
+          gap: 'var(--dash-gap)',
+          overflowX: 'auto',
+          scrollSnapType: 'x mandatory',
+          paddingBottom: 'var(--space-2)',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+        }}
+      >
+        <KPICard
+          title="Ventas del día"
+          value={formatCurrency(ventasDelDia, config)}
+          icon="💰"
+        />
+        <KPICard
+          title="Cuentas por cobrar"
+          value={formatCurrency(cuentasPorCobrar, config)}
+          icon="📞"
+        />
+        <KPICard
+          title="Valor del inventario"
+          value={formatCurrency(valorInventario, config)}
+          icon="📦"
+        />
       </div>
 
-      {/* Charts Row - 2 mini charts using new primitives */}
-      <div data-testid="charts-row" className="grid grid-cols-1 lg:grid-cols-2 mb-1" style={{ gap: 'var(--dash-gap)' }}>
-        <MicroCard title="Ventas 7d" $chart>
-          <MicroAreaChart
-            data={[
-              { day: 'Lun', cash: 12000, credit: 8000 },
-              { day: 'Mar', cash: 18000, credit: 12000 },
-              { day: 'Mié', cash: 15000, credit: 9000 },
-              { day: 'Jue', cash: 22000, credit: 15000 },
-              { day: 'Vie', cash: 25000, credit: 18000 },
-              { day: 'Sáb', cash: 30000, credit: 20000 },
-              { day: 'Dom', cash: 28000, credit: 19000 },
-            ]}
-            xKey="day"
-            series={[
-              { key: 'cash', color: 'var(--color-primary)' },
-              { key: 'credit', color: 'var(--color-success)' },
-            ]}
-          />
-        </MicroCard>
-        <MicroCard title="Top 5 prod (30d)" $chart>
-          <MicroBarChart
-            data={[
-              { name: 'Remera negra M', units: 45, color: 'var(--color-primary)' },
-              { name: 'Jean azul 32', units: 38, color: 'var(--color-success)' },
-              { name: 'Zapatilla blanca 40', units: 32, color: 'var(--color-warning)' },
-              { name: 'Buzo gris L', units: 28, color: 'var(--color-info)' },
-              { name: 'Short negro M', units: 22, color: 'var(--color-danger)' },
-            ]}
-            xKey="name"
-            yKey="units"
-            layout="vertical"
-          />
-        </MicroCard>
+      {/* Main Content Grid: Chart (2/3) + Movements (1/3) on desktop, stacked on mobile */}
+      <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 'var(--dash-gap)' }}>
+        {/* Ingresos (7 días) Chart Card */}
+        <section className="card" style={{ minHeight: 0 }}>
+          <header className="card-header" style={{ padding: 'var(--space-3) var(--space-4)', borderBottom: '1px solid var(--color-border)' }}>
+            <h2 style={{ margin: 0, fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--color-text)' }}>
+              Ingresos (7 días)
+            </h2>
+          </header>
+          <div className="card-body" style={{ padding: 'var(--space-4)', minHeight: '300px' }}>
+            <MicroBarChart
+              data={income7Days}
+              xKey="day"
+              yKey="income"
+              series={[
+                { key: 'income', color: 'var(--color-primary)', label: 'Ingresos' },
+              ]}
+              height={280}
+              showGrid
+              showAxis
+              yAxisFormatter={(v) => formatCurrency(v, config)}
+            />
+          </div>
+        </section>
+
+        {/* Últimos movimientos List */}
+        <section className="card" style={{ minHeight: 0 }}>
+          <header className="card-header" style={{ padding: 'var(--space-3) var(--space-4)', borderBottom: '1px solid var(--color-border)' }}>
+            <h2 style={{ margin: 0, fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--color-text)' }}>
+              Últimos movimientos
+            </h2>
+          </header>
+          <div className="card-body" style={{ padding: 0 }}>
+            <ul className="movements-list" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+              {recentMovements.map((mov, i) => (
+                <li key={i} className="movement-item" style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--space-3)',
+                  padding: 'var(--space-3) var(--space-4)',
+                  borderBottom: i < recentMovements.length - 1 ? '1px solid var(--color-border)' : 'none',
+                }}>
+                  {/* Icon circle with pastel background */}
+                  <span className="movement-icon" style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    background: getIconBg(mov.iconColor),
+                    color: getIconColor(mov.iconColor),
+                    flexShrink: 0,
+                    fontSize: '18px',
+                  }}>
+                    {getIconForType(mov.type)}
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: '0 0 2px', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text)', lineHeight: 1.2 }}>
+                      {mov.title}
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)', fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', lineHeight: 1.3 }}>
+                      <span>Cantidad: <strong>{formatCurrency(mov.cantidad, config)}</strong></span>
+                      {mov.precio !== undefined && mov.precio !== 0 && (
+                        <span>Precio unidad: <strong>{mov.currency ? `${mov.currency} ` : ''}${formatCurrency(mov.precio, config)}</strong></span>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right', minWidth: '80px' }}>
+                    <p style={{ margin: 0, fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--color-text)' }}>
+                      {formatCurrency(mov.amount, config)}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
       </div>
 
-      {/* Lists Row - 2 compact lists */}
-      <div data-testid="lists-row" className="grid grid-cols-1 lg:grid-cols-2 mb-1" style={{ gap: 'var(--dash-gap)' }}>
-        <MicroCard title="Ventas recientes"><MicroRecentSales sales={stats.recentSales ?? []} config={config} /></MicroCard>
-        <MicroCard title="Atención"><MicroUrgentItems stats={stats} /></MicroCard>
-      </div>
-
-      {/* Quick Actions - 3 cols */}
-      <MicroCard title="Acciones"><MicroQuickActions actions={stats.quickActions ?? {}} /></MicroCard>
+      {/* Pull-to-refresh touch handlers */}
+      <div
+        style={{ height: 0 }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      />
     </section>
   );
 }
 
-/** Micro KPI Card - ultra compact */
-function MicroKPI({ title, value, subtitle, icon, trend }) {
-  const trendColors = { up: 'var(--color-success)', down: 'var(--color-danger)', neutral: 'var(--color-text-secondary)' };
+/** KPI Card for scroll strip */
+function KPICard({ title, value, icon }) {
   return (
-    <div data-testid="kpi-card" className="card" style={{ minHeight: 0 }}>
-      <div className="card-body" style={{ padding: 'var(--dash-card-padding)' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '4px' }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: '0 0 2px', fontSize: 'var(--dash-text-base)', fontWeight: 600, color: 'var(--color-text-secondary)', lineHeight: 1.1 }}>{title}</p>
-            <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: 'var(--color-text)', lineHeight: 1.15 }}>{value}</p>
-            <p style={{ margin: '1px 0 0', fontSize: '8px', color: 'var(--color-text-secondary)', lineHeight: 1.1 }}>{subtitle}</p>
+    <div
+      data-testid="kpi-card"
+      className="kpi-card"
+      style={{
+        flex: '0 0 auto',
+        width: '260px',
+        scrollSnapAlign: 'start',
+        minWidth: '240px',
+        maxWidth: '280px',
+      }}
+    >
+      <div className="card" style={{ minHeight: 0 }}>
+        <div className="card-body" style={{ padding: 'var(--space-4)' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--space-3)' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ margin: '0 0 var(--space-1)', fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--color-text-secondary)', lineHeight: 1.2 }}>
+                {title}
+              </p>
+              <p style={{ margin: 0, fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--color-text)', lineHeight: 1.2 }}>
+                {value}
+              </p>
+            </div>
+            <span style={{ fontSize: '20px', opacity: 0.8, flexShrink: 0 }}>{icon}</span>
           </div>
-          <span style={{ fontSize: '12px', opacity: 0.7, flexShrink: 0 }}>{icon}</span>
-        </div>
-        <div style={{ marginTop: '2px' }}>
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: '2px',
-            padding: '0 4px', borderRadius: '999px',
-            fontSize: '7px', fontWeight: 600,
-            background: `${trendColors[trend]}20`,
-            color: trendColors[trend],
-          }}>
-            {trend === 'up' ? '↑' : trend === 'down' ? '↓' : '—'} {trend === 'up' ? 'Bien' : trend === 'down' ? 'Atención' : 'OK'}
-          </span>
         </div>
       </div>
     </div>
   );
 }
 
-/** Micro Card wrapper */
-function MicroCard({ title, children, $chart = false }) {
-  return (
-    <div className="card" style={{ minHeight: 0 }}>
-      <div
-        className="card-header"
-        style={{
-          padding: 'var(--dash-space-1) var(--dash-space-2)',
-          borderBottom: '1px solid var(--color-border)',
-        }}
-      >
-        <h3
-          style={{
-            margin: 0,
-            fontSize: 'var(--dash-text-base)',
-            fontWeight: 600,
-            color: 'var(--color-text-secondary)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.03em',
-          }}
-        >
-          {title}
-        </h3>
-      </div>
-      <div
-        className="card-body"
-        style={{
-          padding: 'var(--dash-space-1) var(--dash-space-2)',
-          minHeight: $chart ? undefined : 0,
-          overflow: $chart ? 'visible' : 'hidden',
-        }}
-      >
-        {children}
-      </div>
-    </div>
-  );
+function getIconBg(color) {
+  switch (color) {
+    case 'green': return 'var(--color-success-light)';
+    case 'blue': return 'var(--color-info-light)';
+    case 'red': return 'var(--color-danger-light)';
+    default: return 'var(--color-primary-light)';
+  }
 }
 
-/** Micro Recent Sales - 4 rows max */
-function MicroRecentSales({ sales, config }) {
-  if (!sales.length) return <div style={{ fontSize: '9px', color: 'var(--color-text-secondary)', textAlign: 'center', padding: '8px' }}>Sin ventas recientes</div>;
-
-  return (
-    <div style={{ fontSize: '8px', lineHeight: 1.3 }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8px' }}>
-        <thead>
-          <tr style={{ color: 'var(--color-text-secondary)', fontWeight: 600, fontSize: '7px' }}>
-            <th style={{ padding: '2px 4px', textAlign: 'left' }}>Venta</th>
-            <th style={{ padding: '2px 4px', textAlign: 'left' }}>Cliente</th>
-            <th style={{ padding: '2px 4px', textAlign: 'left' }}>Fecha</th>
-            <th style={{ padding: '2px 4px', textAlign: 'left' }}>Tipo</th>
-            <th style={{ padding: '2px 4px', textAlign: 'right' }}>Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {sales.slice(0, 4).map((sale) => (
-            <tr key={sale.id} style={{ borderTop: '1px solid var(--color-border)' }}>
-              <td style={{ padding: '2px 4px', fontFamily: 'monospace', fontSize: '7px', color: 'var(--color-text-secondary)' }}>{sale.id.slice(0, 6)}…</td>
-              <td style={{ padding: '2px 4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sale.customer_name}</td>
-              <td style={{ padding: '2px 4px', whiteSpace: 'nowrap', fontSize: '7px', color: 'var(--color-text-secondary)' }}>{formatDate(sale.created_at, { currencySymbol: '$', currencyLocale: 'es-AR' })}</td>
-              <td style={{ padding: '2px 4px' }}>
-                <span style={{ fontSize: '7px', padding: '0 3px', borderRadius: '999px', background: sale.type === 'cash' ? 'var(--color-primary-light)' : 'var(--color-success-light)', color: sale.type === 'cash' ? 'var(--color-primary)' : 'var(--color-success)' }}>{sale.type === 'cash' ? 'C' : 'Cr'}</span>
-              </td>
-              <td style={{ padding: '2px 4px', textAlign: 'right', fontWeight: 600, fontSize: '8px' }}>{formatCurrency(sale.total, config)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
+function getIconColor(color) {
+  switch (color) {
+    case 'green': return 'var(--color-success)';
+    case 'blue': return 'var(--color-info)';
+    case 'red': return 'var(--color-danger)';
+    default: return 'var(--color-primary)';
+  }
 }
 
-/** Micro Urgent Items - compact list */
-function MicroUrgentItems({ stats }) {
-  const items = [];
-
-  if ((stats.collections?.overdueToday ?? 0) > 0) items.push({ icon: '🔴', label: `${stats.collections.overdueToday} vencidos hoy`, path: '/cobros' });
-  if ((stats.collections?.dueNext3Days ?? 0) > 0) items.push({ icon: '🟡', label: `${stats.collections.dueNext3Days} vencen 3d`, path: '/cobros' });
-  if ((stats.collections?.withoutPhone ?? 0) > 0) items.push({ icon: '📵', label: `${stats.collections.withoutPhone} sin tel`, path: '/clientes' });
-  if ((stats.apartados?.pending ?? 0) > 0) items.push({ icon: '📦', label: `${stats.apartados.pending} apartados`, path: '/apartados' });
-  if ((stats.suppliers?.overdue ?? 0) > 0) items.push({ icon: '🏪', label: `${stats.suppliers.overdue} prov. vencidos`, path: '/proveedores' });
-  if ((stats.inventory?.lowStock ?? 0) > 0) items.push({ icon: '⚠️', label: `${stats.inventory.lowStock} stock bajo`, path: '/inventory' });
-
-  if (!items.length) return <div style={{ fontSize: '9px', color: 'var(--color-text-secondary)', textAlign: 'center', padding: '8px' }}>✅ Todo al día</div>;
-
-  return (
-    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
-      {items.slice(0, 6).map((item, i) => (
-        <li key={i}>
-          <NavLink to={item.path} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', padding: '3px 6px', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '3px', textDecoration: 'none', color: 'inherit', fontSize: '8px', lineHeight: 1.2 }}>
-            <span><span style={{ marginRight: '3px' }}>{item.icon}</span>{item.label}</span>
-            <span style={{ fontSize: '7px', color: 'var(--color-text-secondary)' }}>→</span>
-          </NavLink>
-        </li>
-      ))}
-    </ul>
-  );
+function getIconForType(type) {
+  switch (type) {
+    case 'rendimiento': return '⟳';
+    case 'cobranzas': return '$';
+    case 'venta': return '🛒';
+    case 'abono': return '↩';
+    case 'gasto': return '📄';
+    default: return '•';
+  }
 }
 
-/** Micro Quick Actions - 3 cols x 2 rows */
-function MicroQuickActions({ actions }) {
-  const actionItems = [
-    { path: '/venta', label: 'Nueva venta', icon: '💰', disabled: !actions.hasProducts || !actions.hasCustomers },
-    { path: '/credit-sales', label: 'Venta crédito', icon: '📋', disabled: !actions.hasProducts || !actions.hasCustomers },
-    { path: '/apartados', label: 'Nuevo apartado', icon: '📦', disabled: !actions.hasProducts || !actions.hasCustomers },
-    { path: '/payments', label: 'Registrar cobro', icon: '💵', disabled: !actions.hasOpenDebts },
-    { path: '/proveedores', label: 'Deuda prov.', icon: '🏪', disabled: !actions.hasSupplierDebts },
-    { path: '/clientes', label: 'Nuevo cliente', icon: '👤', disabled: false },
-  ];
-
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '3px' }}>
-      {actionItems.map((action) => (
-        <NavLink
-          key={action.path}
-          to={action.path}
-          style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            padding: '4px 2px', gap: '1px',
-            border: '1px solid var(--color-border)', borderRadius: '3px',
-            background: action.disabled ? 'var(--color-surface-hover)' : 'var(--color-surface)',
-            opacity: action.disabled ? 0.5 : 1, pointerEvents: action.disabled ? 'none' : 'auto',
-            textDecoration: 'none', color: 'inherit',
-            transition: 'border-color 0.1s, background 0.1s',
-            minHeight: '56px',
-          }}
-          onMouseEnter={(e) => !action.disabled && (e.currentTarget.style.borderColor = 'var(--color-primary)')}
-          onMouseLeave={(e) => !action.disabled && (e.currentTarget.style.borderColor = 'var(--color-border)')}
-        >
-          <span style={{ fontSize: '11px' }}>{action.icon}</span>
-          <span style={{ fontWeight: 600, fontSize: '7px', lineHeight: 1.1, whiteSpace: 'nowrap' }}>{action.label}</span>
-        </NavLink>
-      ))}
-    </div>
-  );
-}
-
-/** Skeleton loading state using new Skeleton primitive */
+/** Skeleton loading state */
 function DashboardSkeleton() {
   return (
-    <section style={{ padding: 'var(--dash-space-2) 0', maxHeight: 'calc(100vh - var(--space-8))', overflow: 'hidden' }}>
-      <header className="flex items-center justify-between gap-1 mb-2">
-        <Skeleton variant="text" width="80px" height="16px" />
+    <section style={{ padding: 'var(--dash-space-2) 0', display: 'flex', flexDirection: 'column', gap: 'var(--dash-gap)' }}>
+      <header className="flex items-center justify-between gap-2 mb-1">
+        <Skeleton variant="text" width="100px" height="24px" />
+        <Skeleton variant="rectangular" width="60px" height="36px" />
       </header>
-      <div className="grid grid-cols-2 lg:grid-cols-4 mb-1" style={{ gap: 'var(--dash-gap)' }}>
-        {[1, 2, 3, 4].map(i => <MicroSkeleton key={i} />)}
+      <div className="kpi-strip" style={{ display: 'flex', gap: 'var(--dash-gap)', overflowX: 'auto' }}>
+        {[1, 2, 3].map(i => <Skeleton key={i} variant="rectangular" width="260px" height="100px" style={{ flexShrink: 0 }} />)}
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 mb-1" style={{ gap: 'var(--dash-gap)' }}>
-        <MicroSkeletonChart />
-        <MicroSkeletonChart />
+      <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 'var(--dash-gap)' }}>
+        <Skeleton variant="rectangular" width="100%" height="400px" />
+        <Skeleton variant="rectangular" width="100%" height="400px" />
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 mb-1" style={{ gap: 'var(--dash-gap)' }}>
-        <MicroSkeletonList />
-        <MicroSkeletonList />
-      </div>
-      <MicroSkeletonCard />
     </section>
-  );
-}
-
-function MicroSkeleton() {
-  return (
-    <div className="card">
-      <div style={{ padding: 'var(--dash-card-padding)' }}>
-        <Skeleton variant="text" width="50%" height="8px" style={{ marginBottom: 'var(--dash-space-1)' }} />
-        <Skeleton variant="text" width="40%" height="12px" />
-      </div>
-    </div>
-  );
-}
-
-function MicroSkeletonChart() {
-  return (
-    <div className="card">
-      <div style={{ padding: 'var(--dash-space-1) var(--dash-space-2)' }}>
-        <Skeleton variant="rectangular" height="var(--dash-chart-height)" width="100%" />
-      </div>
-    </div>
-  );
-}
-
-function MicroSkeletonList() {
-  return (
-    <div className="card">
-      <div style={{ padding: 'var(--dash-space-1) var(--dash-space-2)' }}>
-        <Skeleton variant="rectangular" height="120px" width="100%" />
-      </div>
-    </div>
-  );
-}
-
-function MicroSkeletonCard() {
-  return (
-    <div className="card">
-      <div style={{ padding: 'var(--dash-space-1) var(--dash-space-2)' }}>
-        <Skeleton variant="rectangular" height="70px" width="100%" />
-      </div>
-    </div>
   );
 }
 
 function DashboardError({ onRetry }) {
   return (
     <div className="card" style={{ minHeight: 0 }}>
-      <div style={{ padding: '12px', textAlign: 'center' }}>
-        <div className="skeleton" style={{ width: '24px', height: '24px', borderRadius: '50%', margin: '0 auto 4px', background: 'var(--color-danger-light)' }} />
-        <h3 style={{ margin: '0 0 2px', color: 'var(--color-danger)', fontSize: '9px' }}>Error</h3>
-        <p style={{ fontSize: '8px', color: 'var(--color-text-secondary)', margin: '0 0 4px' }}>No se cargaron stats</p>
-        <button onClick={onRetry} style={{ padding: '2px 8px', fontSize: '8px', minHeight: '24px' }} className="btn btn-primary">Reintentar</button>
+      <div style={{ padding: 'var(--space-4)', textAlign: 'center' }}>
+        <div className="skeleton" style={{ width: '24px', height: '24px', borderRadius: '50%', margin: '0 auto var(--space-2)', background: 'var(--color-danger-light)' }} />
+        <h3 style={{ margin: '0 0 var(--space-1)', color: 'var(--color-danger)', fontSize: 'var(--text-base)' }}>Error</h3>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)', margin: '0 0 var(--space-3)' }}>No se cargaron datos del dashboard</p>
+        <button onClick={onRetry} className="btn btn-primary">Reintentar</button>
       </div>
     </div>
   );
