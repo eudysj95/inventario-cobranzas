@@ -86,7 +86,7 @@ export default function DashboardPage() {
       {(isPulling || isRefreshing) && (
         <div
           style={{
-            position: 'absolute',
+            position: 'relative',
             top: 0,
             left: 0,
             right: 0,
@@ -98,7 +98,7 @@ export default function DashboardPage() {
             color: 'var(--color-primary)',
             fontSize: 'var(--dash-text-base)',
             fontWeight: 600,
-            zIndex: 100,
+            zIndex: 10,
             transform: `translateY(${isPulling ? Math.min(pullDistance * 0.5, 30) : 0}px)`,
             transition: 'transform 0.1s ease-out',
           }}
@@ -148,6 +148,9 @@ export default function DashboardPage() {
           paddingBottom: 'var(--space-2)',
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
+          position: 'relative',
+          zIndex: 5,
+          minHeight: '100px',
         }}
       >
         <KPICard
