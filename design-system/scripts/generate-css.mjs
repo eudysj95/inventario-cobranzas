@@ -172,35 +172,35 @@ function generateCSS(tokens, outputPath) {
 }
 `;
 
-  // Dark mode
-  if (Object.keys(dm).length > 0) {
-    css += `
-/* Dark mode — opt-in via data-theme="dark" on <html> */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --color-bg: ${dm.bg?.value || '#111827'};
-    --color-surface: ${dm.surface?.value || '#1f2937'};
-    --color-surface-hover: ${dm.surfaceHover?.value || '#374151'};
-    --color-border: ${dm.border?.value || '#374151'};
-    --color-border-strong: ${dm.borderStrong?.value || '#4b5563'};
-    --color-text: ${dm.text?.value || '#f3f4f6'};
-    --color-text-secondary: ${dm.textSecondary?.value || '#9ca3af'};
-    --color-text-muted: ${dm.textMuted?.value || '#6b7280'};
-    --color-primary-light: ${dm.primaryLight?.value || '#064e3b'};
-    --color-success-light: ${dm.successLight?.value || '#14532d'};
-    --color-warning-light: ${dm.warningLight?.value || '#713f12'};
-    --color-danger-light: ${dm.dangerLight?.value || '#7f1d1d'};
-    --color-info-light: ${dm.infoLight?.value || '#1e3a5f'};
-    --shadow-xs: ${dm.shadowXs?.value || '0 1px 2px rgba(0,0,0,0.2)'};
-    --shadow-sm: ${dm.shadowSm?.value || '0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)'};
-    --shadow-md: ${dm.shadowMd?.value || '0 4px 6px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2)'};
-    --shadow-lg: ${dm.shadowLg?.value || '0 10px 15px rgba(0,0,0,0.4), 0 4px 6px rgba(0,0,0,0.2)'};
-    --shadow-xl: ${dm.shadowXl?.value || '0 20px 25px rgba(0,0,0,0.5), 0 10px 10px rgba(0,0,0,0.3)'};
-    --shadow-modal: ${dm.shadowModal?.value || '0 25px 50px rgba(0,0,0,0.6)'};
-  }
-}
-`;
-  }
+  // Dark mode — DESACTIVADO temporalmente (solo light mode)
+  // if (Object.keys(dm).length > 0) {
+  //   css += `
+  // /* Dark mode — opt-in via data-theme="dark" on <html> */
+  // @media (prefers-color-scheme: dark) {
+  //   :root:not([data-theme="light"]) {
+  //     --color-bg: ${dm.bg?.value || '#111827'};
+  //     --color-surface: ${dm.surface?.value || '#1f2937'};
+  //     --color-surface-hover: ${dm.surfaceHover?.value || '#374151'};
+  //     --color-border: ${dm.border?.value || '#374151'};
+  //     --color-border-strong: ${dm.borderStrong?.value || '#4b5563'};
+  //     --color-text: ${dm.text?.value || '#f3f4f6'};
+  //     --color-text-secondary: ${dm.textSecondary?.value || '#9ca3af'};
+  //     --color-text-muted: ${dm.textMuted?.value || '#6b7280'};
+  //     --color-primary-light: ${dm.primaryLight?.value || '#064e3b'};
+  //     --color-success-light: ${dm.successLight?.value || '#14532d'};
+  //     --color-warning-light: ${dm.warningLight?.value || '#713f12'};
+  //     --color-danger-light: ${dm.dangerLight?.value || '#7f1d1d'};
+  //     --color-info-light: ${dm.infoLight?.value || '#1e3a5f'};
+  //     --shadow-xs: ${dm.shadowXs?.value || '0 1px 2px rgba(0,0,0,0.2)'};
+  //     --shadow-sm: ${dm.shadowSm?.value || '0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)'};
+  //     --shadow-md: ${dm.shadowMd?.value || '0 4px 6px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2)'};
+  //     --shadow-lg: ${dm.shadowLg?.value || '0 10px 15px rgba(0,0,0,0.4), 0 4px 6px rgba(0,0,0,0.2)'};
+  //     --shadow-xl: ${dm.shadowXl?.value || '0 20px 25px rgba(0,0,0,0.5), 0 10px 10px rgba(0,0,0,0.3)'};
+  //     --shadow-modal: ${dm.shadowModal?.value || '0 25px 50px rgba(0,0,0,0.6)'};
+  //   }
+  // }
+  // `;
+  // }
 
   // High contrast
   if (Object.keys(hc).length > 0) {
