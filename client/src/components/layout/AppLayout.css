@@ -17,7 +17,6 @@
 /* Sidebar area */
 .sidebar {
   grid-area: sidebar;
-  background: var(--color-surface);
   border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
