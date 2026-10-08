@@ -7,45 +7,45 @@
      No brand-specific hues — only universal meaning. */
 
   /* Primary = Main actions, links, focus, active nav */
-  --color-primary: #16a34a;
-  --color-primary-hover: #15803d;
-  --color-primary-light: #dcfce7;
-  --color-primary-text: #ffffff;
+  --color-primary: #0F172A;
+  --color-primary-hover: #1E293B;
+  --color-primary-light: #E2E8F0;
+  --color-primary-text: #FFFFFF;
 
   /* Success = Confirmed, paid, available, OK */
-  --color-success: #2e7d32;
-  --color-success-hover: #1b5e20;
-  --color-success-light: #e8f5e9;
-  --color-success-text: #ffffff;
+  --color-success: #10B981;
+  --color-success-hover: #059669;
+  --color-success-light: #D1FAE5;
+  --color-success-text: #FFFFFF;
 
   /* Warning = Pending, attention, apartado, due soon */
-  --color-warning: #f9a825;
-  --color-warning-hover: #f57f17;
-  --color-warning-light: #fffde7;
-  --color-warning-text: #1a1a1a;
+  --color-warning: #F59E0B;
+  --color-warning-hover: #D97706;
+  --color-warning-light: #FEF3C7;
+  --color-warning-text: #1E293B;
 
   /* Danger = Error, overdue, cancelled, delete, critical stock */
-  --color-danger: #d32f2f;
-  --color-danger-hover: #b71c1c;
-  --color-danger-light: #fdecea;
-  --color-danger-text: #ffffff;
+  --color-danger: #EF4444;
+  --color-danger-hover: #DC2626;
+  --color-danger-light: #FEE2E2;
+  --color-danger-text: #FFFFFF;
 
   /* Info = Neutral info, credit, available */
-  --color-info: #1565c0;
-  --color-info-hover: #0d47a1;
-  --color-info-light: #e3f2fd;
-  --color-info-text: #ffffff;
+  --color-info: #2563EB;
+  --color-info-hover: #1D4ED8;
+  --color-info-light: #DBEAFE;
+  --color-info-text: #FFFFFF;
 
   /* === NEUTRALS === */
-  --color-bg: #fafafa;
-  --color-surface: #ffffff;
-  --color-surface-hover: #f5f5f5;
-  --color-border: #e0e0e0;
-  --color-border-strong: #bdbdbd;
-  --color-text: #212121;
-  --color-text-secondary: #757575;
-  --color-text-muted: #9e9e9e;
-  --color-text-inverse: #ffffff;
+  --color-bg: #F8FAFC;
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #F1F5F9;
+  --color-border: #E2E8F0;
+  --color-border-strong: #CBD5E1;
+  --color-text: #1E293B;
+  --color-text-secondary: #64748B;
+  --color-text-muted: #94A3B8;
+  --color-text-inverse: #FFFFFF;
 
   /* === TYPOGRAPHY === */
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -167,8 +167,8 @@
 /* Print styles */
 @media print {
   :root {
-    --color-bg: #ffffff;
-    --color-surface: #ffffff;
+    --color-bg: #FFFFFF;
+    --color-surface: #FFFFFF;
     --color-text: #000000;
     --shadow-sm: none;
     --shadow-md: none;
