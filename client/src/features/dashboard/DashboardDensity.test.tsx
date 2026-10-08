@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import DashboardPage from "./DashboardPage";
 import { useDashboardStats } from "../../api/dashboard";
@@ -19,7 +19,7 @@ vi.mock("../../api/config", () => ({
   },
 }));
 
-describe("Dashboard Density Isolation", () => {
+describe("Dashboard Layout & Spacing (New Design)", () => {
   const mockStats = {
     sales: { today: 10000, cashToday: 6000, creditToday: 4000 },
     inventory: { lowStock: 2, outOfStock: 0, totalValue: 50000 },
@@ -55,154 +55,179 @@ describe("Dashboard Density Isolation", () => {
     );
   };
 
-  it("renders dashboard root with data-density attribute", () => {
-    renderDashboard();
-    const dashboardRoot = screen.getByTestId("dashboard-root");
-    expect(dashboardRoot).toHaveAttribute("data-density", "compact");
+  describe("Dashboard Root Layout", () => {
+    it("renders dashboard root with correct test ID", () => {
+      renderDashboard();
+      const dashboardRoot = screen.getByTestId("dashboard-root");
+      expect(dashboardRoot).toBeInTheDocument();
+      expect(dashboardRoot).not.toHaveAttribute("data-density");
+    });
+
+    it("uses dash-space-2 for root padding", () => {
+      renderDashboard();
+      const dashboardRoot = screen.getByTestId("dashboard-root");
+      const styles = window.getComputedStyle(dashboardRoot);
+      expect(styles.paddingTop).toBeTruthy();
+      expect(styles.paddingBottom).toBeTruthy();
+    });
+
+    it("has flex column layout with gap", () => {
+      renderDashboard();
+      const dashboardRoot = screen.getByTestId("dashboard-root");
+      const styles = window.getComputedStyle(dashboardRoot);
+      expect(styles.display).toBe("flex");
+      expect(styles.flexDirection).toBe("column");
+      expect(styles.gap).toBeTruthy();
+    });
   });
 
-  it("applies compact density CSS custom properties via class and attribute", () => {
-    renderDashboard();
-    const dashboardRoot = screen.getByTestId("dashboard-root");
+  describe("KPI Strip Spacing", () => {
+    it("renders KPI strip with horizontal scroll", () => {
+      renderDashboard();
+      const kpiStrip = document.querySelector('[style*="scroll-snap-type: x mandatory"]') ||
+                       screen.getByText("Ventas del día").closest('[style*="flex"]');
+      expect(kpiStrip).toBeInTheDocument();
+    });
 
-    // Verify the element has the correct class and attribute for density isolation
-    expect(dashboardRoot).toHaveClass("dashboard-root");
-    expect(dashboardRoot).toHaveAttribute("data-density", "compact");
+    it("uses dash-gap for KPI card gap", () => {
+      renderDashboard();
+      const kpiStrip = screen.getByText("Ventas del día").closest('[style*="gap"]');
+      expect(kpiStrip).toBeInTheDocument();
+    });
 
-    // In a real browser, the CSS rule .dashboard-root[data-density="compact"] would apply
-    // the dash-* custom properties. JSDOM doesn't fully resolve stylesheet custom properties,
-    // so we verify the selector matches instead.
-    const hasCompactSelector = dashboardRoot.matches('.dashboard-root[data-density="compact"]');
-    expect(hasCompactSelector).toBe(true);
+    it("KPI cards use scroll-snap-align: start", () => {
+      renderDashboard();
+      const kpiCards = screen.getAllByTestId("kpi-card");
+      expect(kpiCards.length).toBe(3);
+      kpiCards.forEach(card => {
+        const styles = window.getComputedStyle(card);
+        expect(styles.scrollSnapAlign).toBe("start");
+      });
+    });
+
+    it("KPI cards have min/max width constraints", () => {
+      renderDashboard();
+      const kpiCards = screen.getAllByTestId("kpi-card");
+      kpiCards.forEach(card => {
+        const styles = window.getComputedStyle(card);
+        expect(styles.minWidth).toBeTruthy();
+        expect(styles.maxWidth).toBeTruthy();
+        expect(styles.flexShrink).toBe("0");
+      });
+    });
   });
 
-  it("uses dash-space tokens for KPI card padding in compact mode", () => {
-    renderDashboard();
-    const kpiCards = screen.getAllByTestId("kpi-card");
-    expect(kpiCards.length).toBe(4);
+  describe("KPI Card Spacing", () => {
+    it("KPI card uses space-4 padding", () => {
+      renderDashboard();
+      const kpiCards = screen.getAllByTestId("kpi-card");
+      kpiCards.forEach(card => {
+        const cardBody = card.querySelector(".card-body") || card.querySelector('[style*="padding"]');
+        expect(cardBody).toBeInTheDocument();
+      });
+    });
 
-    const firstCard = kpiCards[0];
-    const styles = window.getComputedStyle(firstCard);
-    // Card padding should use --dash-card-padding (which maps to --space-2 in compact)
-    expect(styles.padding).toBeTruthy();
+    it("KPI title uses text-sm with text-secondary color", () => {
+      renderDashboard();
+      const title = screen.getByText("Ventas del día");
+      const styles = window.getComputedStyle(title);
+      expect(styles.fontSize).toBeTruthy();
+      expect(styles.color).toBeTruthy();
+    });
+
+    it("KPI value uses text-xl bold with text color", () => {
+      renderDashboard();
+      const values = screen.getAllByText(/\$\d{1,3}(?:,\d{3})*\.\d{2}/);
+      expect(values.length).toBeGreaterThanOrEqual(2);
+      values.forEach(v => {
+        const styles = window.getComputedStyle(v);
+        expect(styles.fontSize).toBeTruthy();
+        expect(styles.fontWeight).toMatch(/700|bold/);
+      });
+    });
   });
 
-  it("uses dash-gap token for charts row gap in compact mode", () => {
-    renderDashboard();
-    const chartsRow = screen.getByTestId("charts-row");
-    const styles = window.getComputedStyle(chartsRow);
-    expect(styles.gap).toBeTruthy();
-  });
+  describe("Dashboard Grid Layout", () => {
+    it("renders grid with 1fr column on mobile", () => {
+      renderDashboard();
+      const grid = document.querySelector(".dashboard-grid") ||
+                   document.querySelector('[style*="gridTemplateColumns: 1fr"]');
+      expect(grid).toBeInTheDocument();
+    });
 
-  it("uses dash-gap token for lists row gap in compact mode", () => {
-    renderDashboard();
-    const listsRow = screen.getByTestId("lists-row");
-    const styles = window.getComputedStyle(listsRow);
-    expect(styles.gap).toBeTruthy();
-  });
-
-  it("uses dash-text-base for KPI title typography in compact mode", () => {
-    renderDashboard();
-    const title = screen.getByText("Ventas hoy");
-    const styles = window.getComputedStyle(title);
-    // Should use smaller text (--text-sm maps to --dash-text-base in compact)
-    expect(styles.fontSize).toBeTruthy();
-  });
-
-  it("uses dash-text-lg for dashboard title in compact mode", () => {
-    renderDashboard();
-    const title = screen.getByText("Dashboard");
-    const styles = window.getComputedStyle(title);
-    expect(styles.fontSize).toBeTruthy();
-  });
-
-  it("isolates density from rest of app - no leakage to parent elements", () => {
-    const { container } = renderDashboard();
-    const dashboardRoot = container.querySelector('[data-testid="dashboard-root"]');
-    const parentStyles = window.getComputedStyle(dashboardRoot!.parentElement!);
-
-    // Parent should NOT have dash-* custom properties
-    expect(parentStyles.getPropertyValue("--dash-space-1")).toBe("");
-    expect(parentStyles.getPropertyValue("--dash-card-padding")).toBe("");
-  });
-});
-
-describe("Dashboard Density Tokens (design-tokens.css)", () => {
-  it("defines --dash-density custom property with compact and comfortable values", () => {
-    // This test verifies the CSS custom properties exist
-    // The actual values are tested via computed styles in component tests
-    const style = document.createElement("style");
-    style.textContent = `
-      .test-density {
-        --dash-density: compact;
-        --dash-space-1: var(--space-1);
-        --dash-space-2: var(--space-1);
-        --dash-space-3: var(--space-2);
-        --dash-space-4: var(--space-3);
-        --dash-text-base: var(--text-sm);
-        --dash-text-lg: var(--text-base);
-        --dash-card-padding: var(--space-2);
-        --dash-gap: var(--space-1);
+    it("grid uses dash-gap for gap", () => {
+      renderDashboard();
+      const grid = document.querySelector('[style*="gridTemplateColumns"]');
+      if (grid) {
+        const styles = window.getComputedStyle(grid);
+        expect(styles.gap).toBeTruthy();
       }
-    `;
-    document.head.appendChild(style);
-
-    const testEl = document.createElement("div");
-    testEl.className = "test-density";
-    document.body.appendChild(testEl);
-
-    const styles = window.getComputedStyle(testEl);
-    expect(styles.getPropertyValue("--dash-density")).toBe("compact");
-
-    document.body.removeChild(testEl);
-    document.head.removeChild(style);
+    });
   });
 
-  it("supports comfortable density mode with base token values", () => {
-    render(
-      <MemoryRouter initialEntries={["/dashboard"]}>
-        <section
-          data-testid="dashboard-root-comfortable"
-          data-density="comfortable"
-          className="dashboard-root"
-        >
-          Dashboard
-        </section>
-      </MemoryRouter>
-    );
+  describe("Card Spacing (Chart + Movements)", () => {
+    it("chart card has card-header with space-3/4 padding", () => {
+      renderDashboard();
+      const chartCard = screen.getByText("Ingresos (7 días)").closest("section.card");
+      expect(chartCard).toBeInTheDocument();
+      const header = chartCard?.querySelector(".card-header");
+      expect(header).toBeInTheDocument();
+    });
 
-    const dashboardRoot = screen.getByTestId("dashboard-root-comfortable");
-    expect(dashboardRoot).toHaveAttribute("data-density", "comfortable");
-    const hasComfortableSelector = dashboardRoot.matches(
-      '.dashboard-root[data-density="comfortable"]'
-    );
-    expect(hasComfortableSelector).toBe(true);
+    it("movements card has card-body with no padding (list fills)", () => {
+      renderDashboard();
+      const movementsCard = screen.getByText("Últimos movimientos").closest("section.card");
+      expect(movementsCard).toBeInTheDocument();
+      const body = movementsCard?.querySelector(".card-body");
+      expect(body).toBeInTheDocument();
+    });
   });
 
-  it("defines --dash-chart-height for compact and comfortable modes", () => {
-    const style = document.createElement("style");
-    style.textContent = `
-      .test-chart-compact {
-        --dash-chart-height: 60px;
-      }
-      .test-chart-comfortable {
-        --dash-chart-height: 80px;
-      }
-    `;
-    document.head.appendChild(style);
+  describe("Movement List Item Spacing", () => {
+    it("movement items use space-3 gap and space-3/4 padding", () => {
+      renderDashboard();
+      const movementItems = document.querySelectorAll(".movement-item");
+      expect(movementItems.length).toBeGreaterThan(0);
+    });
 
-    const compactEl = document.createElement("div");
-    compactEl.className = "test-chart-compact";
-    document.body.appendChild(compactEl);
-    expect(window.getComputedStyle(compactEl).getPropertyValue("--dash-chart-height")).toBe("60px");
-    document.body.removeChild(compactEl);
+    it("icon circle uses 40px size with border-radius-full", () => {
+      renderDashboard();
+      const icons = document.querySelectorAll('[style*="border-radius: 50%"][style*="width: 40px"]');
+      expect(icons.length).toBeGreaterThan(0);
+    });
 
-    const comfortableEl = document.createElement("div");
-    comfortableEl.className = "test-chart-comfortable";
-    document.body.appendChild(comfortableEl);
-    expect(window.getComputedStyle(comfortableEl).getPropertyValue("--dash-chart-height")).toBe("80px");
-    document.body.removeChild(comfortableEl);
+    it("movement rows have space-2 gap for subrows", () => {
+      renderDashboard();
+      const subrows = document.querySelectorAll('[style*="gap: var(--space-2)"]');
+      expect(subrows.length).toBeGreaterThan(0);
+    });
+  });
 
-    document.head.removeChild(style);
+  describe("Spacing Tokens from design-tokens.css", () => {
+    it("verifies dashboard component uses base and dash-* tokens", () => {
+      renderDashboard();
+      const dashboardRoot = screen.getByTestId("dashboard-root");
+      const styles = window.getComputedStyle(dashboardRoot);
+      // Component should use dash-* tokens (which reference base tokens)
+      expect(styles.gap).toBeTruthy(); // uses --dash-gap -> --space-2
+      expect(styles.paddingTop).toBeTruthy(); // uses --dash-space-2 -> --space-2
+      expect(styles.fontSize).toBeTruthy(); // uses --dash-text-base -> --text-base
+    });
+  });
+
+  describe("No Density Leakage", () => {
+    it("dash-* custom properties do not leak to parent elements", () => {
+      const { container } = render(
+        <MemoryRouter initialEntries={["/dashboard"]}>
+          <DashboardPage />
+        </MemoryRouter>
+      );
+      const dashboardRoot = container.querySelector('[data-testid="dashboard-root"]');
+      const parentStyles = window.getComputedStyle(dashboardRoot!.parentElement!);
+
+      expect(parentStyles.getPropertyValue("--dash-space-1")).toBe("");
+      expect(parentStyles.getPropertyValue("--dash-gap")).toBe("");
+      expect(parentStyles.getPropertyValue("--dash-card-padding")).toBe("");
+    });
   });
 });

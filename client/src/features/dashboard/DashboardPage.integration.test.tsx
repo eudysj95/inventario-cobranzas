@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { render, screen, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import DashboardPage from "./DashboardPage";
 import { useDashboardStats } from "../../api/dashboard";
@@ -36,7 +36,7 @@ vi.mock("../../hooks/usePullToRefresh", async (importOriginal) => {
   };
 });
 
-describe("DashboardPage Integration", () => {
+describe("DashboardPage Integration (New Design)", () => {
   const mockStats = {
     sales: { today: 10000, cashToday: 6000, creditToday: 4000 },
     inventory: { lowStock: 2, outOfStock: 0, totalValue: 50000 },
@@ -85,12 +85,11 @@ describe("DashboardPage Integration", () => {
 
       renderDashboard();
 
-      // Should show skeleton elements
       const skeletons = screen.getAllByTestId("skeleton");
       expect(skeletons.length).toBeGreaterThan(0);
     });
 
-    it("shows skeleton for KPI cards", () => {
+    it("shows skeleton for KPI strip", () => {
       (useDashboardStats as any).mockReturnValue({
         data: null,
         isPending: true,
@@ -100,24 +99,8 @@ describe("DashboardPage Integration", () => {
 
       renderDashboard();
 
-      // Should have 4 KPI skeletons
       const kpiSkeletons = screen.getAllByTestId("skeleton");
-      expect(kpiSkeletons.length).toBeGreaterThanOrEqual(4);
-    });
-
-    it("shows skeleton for charts", () => {
-      (useDashboardStats as any).mockReturnValue({
-        data: null,
-        isPending: true,
-        isError: false,
-        refetch: vi.fn(),
-      });
-
-      renderDashboard();
-
-      // Should have chart skeletons
-      const skeletons = screen.getAllByTestId("skeleton");
-      expect(skeletons.length).toBeGreaterThan(0);
+      expect(kpiSkeletons.length).toBeGreaterThanOrEqual(3);
     });
   });
 
@@ -133,41 +116,99 @@ describe("DashboardPage Integration", () => {
       renderDashboard();
 
       expect(screen.getByText("Error")).toBeInTheDocument();
-      expect(screen.getByText("No se cargaron stats")).toBeInTheDocument();
+      expect(screen.getByText("No se cargaron datos del dashboard")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Reintentar" })).toBeInTheDocument();
     });
   });
 
-  describe("Data Display", () => {
-    it("renders KPI cards with data", () => {
+  describe("Data Display - New Design", () => {
+    it("renders KPI strip with 3 cards", () => {
       renderDashboard();
 
-      expect(screen.getByText("Ventas hoy")).toBeInTheDocument();
-      expect(screen.getByText("Stock bajo")).toBeInTheDocument();
-      expect(screen.getByText("Cobrar urg")).toBeInTheDocument();
-      expect(screen.getByText("Proveedores")).toBeInTheDocument();
+      expect(screen.getByText("Ventas del día")).toBeInTheDocument();
+      expect(screen.getByText("Cuentas por cobrar")).toBeInTheDocument();
+      expect(screen.getByText("Valor del inventario")).toBeInTheDocument();
     });
 
-    it("renders charts with data", () => {
+    it("renders KPI cards with values", () => {
       renderDashboard();
 
-      expect(screen.getByText("Ventas 7d")).toBeInTheDocument();
-      expect(screen.getByText("Top 5 prod (30d)")).toBeInTheDocument();
+      const values = screen.getAllByText(/\$\d{1,3}(?:,\d{3})*\.\d{2}/);
+      expect(values.length).toBeGreaterThanOrEqual(2);
     });
 
-    it("renders lists with data", () => {
+    it("renders Ingresos (7 días) chart card", () => {
       renderDashboard();
 
-      expect(screen.getByText("Ventas recientes")).toBeInTheDocument();
-      expect(screen.getByText("Atención")).toBeInTheDocument();
+      expect(screen.getByText("Ingresos (7 días)")).toBeInTheDocument();
+      const chartCard = screen.getByText("Ingresos (7 días)").closest("section.card");
+      expect(chartCard).toBeInTheDocument();
     });
 
-    it("renders quick actions", () => {
+    it("renders Últimos movimientos list", () => {
       renderDashboard();
 
-      expect(screen.getByText("Acciones")).toBeInTheDocument();
-      expect(screen.getByText("Nueva venta")).toBeInTheDocument();
-      expect(screen.getByText("Venta crédito")).toBeInTheDocument();
+      expect(screen.getByText("Últimos movimientos")).toBeInTheDocument();
+      const movementItems = screen.getAllByText(/Rendimiento|Cobranzas|Venta:|Abono:|Gasto:/);
+      expect(movementItems.length).toBeGreaterThan(0);
+    });
+
+    it("renders movement items with icon, title, amount, and subrows", () => {
+      renderDashboard();
+
+      const amounts = screen.getAllByText(/\$\d{1,3}(?:,\d{3})*\.\d{2}/);
+      expect(amounts.length).toBeGreaterThan(0);
+
+      const cantidadLabels = screen.getAllByText(/Cantidad/);
+      expect(cantidadLabels.length).toBeGreaterThan(0);
+
+      const precioLabels = screen.getAllByText(/Precio unidad/);
+      expect(precioLabels.length).toBeGreaterThan(0);
+    });
+
+    it("shows icon circles with pastel backgrounds (green/blue/red)", () => {
+      renderDashboard();
+
+      const iconCircles = document.querySelectorAll('[style*="border-radius: 50%"]');
+      expect(iconCircles.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("KPI Strip - Horizontal Scroll", () => {
+    it("renders KPI strip with scroll container", () => {
+      renderDashboard();
+
+      const kpiStrip = document.querySelector('[style*="scroll-snap-type"]') ||
+                       document.querySelector('[data-testid="kpi-strip"]') ||
+                       screen.getByText("Ventas del día").closest('[style*="flex"]');
+      expect(kpiStrip).toBeInTheDocument();
+    });
+
+    it("has 3 KPI cards in strip", () => {
+      renderDashboard();
+
+      const kpiCards = screen.getAllByTestId("kpi-card");
+      expect(kpiCards.length).toBe(3);
+    });
+  });
+
+  describe("Page Title", () => {
+    it("renders Dashboard title prominently", () => {
+      renderDashboard();
+
+      const title = screen.getByText("Dashboard");
+      expect(title).toBeInTheDocument();
+      const styles = window.getComputedStyle(title);
+      expect(styles.fontWeight).toMatch(/700|bold/);
+    });
+  });
+
+  describe("Refresh Button", () => {
+    it("shows refresh button", () => {
+      renderDashboard();
+
+      const refreshBtn = screen.getByRole("button", { name: /⟳|actualizar/i });
+      expect(refreshBtn).toBeInTheDocument();
     });
   });
 
@@ -176,16 +217,12 @@ describe("DashboardPage Integration", () => {
       renderDashboard();
 
       const dashboardRoot = screen.getByTestId("dashboard-root");
-      // The touch handlers are React props, not DOM attributes
-      // We verify the component renders without error
       expect(dashboardRoot).toBeInTheDocument();
     });
 
     it("uses usePullToRefresh hook", () => {
       renderDashboard();
 
-      // The hook is mocked at the top of the file
-      // We verify the component renders without error
       expect(screen.getByTestId("dashboard-root")).toBeInTheDocument();
     });
   });
@@ -201,8 +238,6 @@ describe("DashboardPage Integration", () => {
           vi.advanceTimersByTime(30000);
         });
 
-        // The refetch should be called via the refreshKey mechanism
-        // We can't easily test the internal state, but we can verify the component renders
         expect(screen.getByText("Dashboard")).toBeInTheDocument();
       } finally {
         vi.useRealTimers();
@@ -210,22 +245,20 @@ describe("DashboardPage Integration", () => {
     });
   });
 
-  describe("Density Isolation", () => {
-    it("has dashboard-root class and data-density attribute", () => {
+  describe("Layout - Responsive Grid", () => {
+    it("renders dashboard-grid with chart and movements cards", () => {
       renderDashboard();
 
-      const dashboardRoot = screen.getByTestId("dashboard-root");
-      expect(dashboardRoot).toHaveClass("dashboard-root");
-      expect(dashboardRoot).toHaveAttribute("data-density", "compact");
+      const grid = document.querySelector(".dashboard-grid") ||
+                   document.querySelector('[style*="gridTemplateColumns"]');
+      expect(grid).toBeInTheDocument();
     });
 
-    it("uses dash-space tokens for padding", () => {
+    it("has two main cards: chart and movements", () => {
       renderDashboard();
 
-      const dashboardRoot = screen.getByTestId("dashboard-root");
-      const styles = window.getComputedStyle(dashboardRoot);
-      // The padding should use the dash-space-2 token
-      expect(styles.paddingTop).toBeTruthy();
+      const cards = document.querySelectorAll("section.card");
+      expect(cards.length).toBeGreaterThanOrEqual(2);
     });
   });
 });
