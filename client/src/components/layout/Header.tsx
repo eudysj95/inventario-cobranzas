@@ -126,12 +126,6 @@ const businessName = config?.businessName ?? 'Nexo';
             </button>
           )}
 
-          {/* Logo - mobile centered, desktop left of breadcrumbs */}
-          <div className="header-logo hide-desktop" aria-label={businessName}>
-            {ICONS.logoMark}
-            <span className="header-logo-text">{businessName}</span>
-          </div>
-
           {/* Sidebar toggle for tablet/desktop */}
           {onSidebarToggle && (
             <button
@@ -144,12 +138,6 @@ const businessName = config?.businessName ?? 'Nexo';
               {sidebarCollapsed ? ICONS.chevronRight : ICONS.chevronLeft}
             </button>
           )}
-
-          {/* Logo (desktop) - left of breadcrumbs */}
-          <div className="header-logo hide-mobile" aria-label={businessName}>
-            {ICONS.logoMark}
-            <span className="header-logo-text">{businessName}</span>
-          </div>
 
           {/* Breadcrumbs */}
           <nav className="breadcrumbs" data-testid="breadcrumbs" role="navigation" aria-label="Ruta de navegación">
