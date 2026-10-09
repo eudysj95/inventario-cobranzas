@@ -146,6 +146,7 @@ export default function DashboardPage() {
           overflowX: 'auto',
           scrollSnapType: 'x mandatory',
           paddingBottom: 'var(--space-2)',
+          paddingRight: 'var(--space-4)',  /* peek de la 3ra tarjeta */
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
           position: 'relative',
