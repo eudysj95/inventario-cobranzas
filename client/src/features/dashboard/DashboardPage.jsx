@@ -184,8 +184,14 @@ export default function DashboardPage() {
               data={income7Days}
               xKey="day"
               yKey="income"
-              series={[
-                { key: 'income', color: 'var(--color-primary)', label: 'Ingresos' },
+              barColors={[
+                'var(--color-success)',      // Lun - verde esmeralda
+                'var(--color-info)',         // Mar - azul secundario
+                'var(--color-primary)',      // Mié - azul marino
+                'var(--color-success)',      // Jue - verde esmeralda
+                'var(--color-info)',         // Vie - azul secundario
+                'var(--color-primary)',      // Sáb - azul marino
+                'var(--color-success)',      // Dom - verde esmeralda
               ]}
               height={280}
               showGrid

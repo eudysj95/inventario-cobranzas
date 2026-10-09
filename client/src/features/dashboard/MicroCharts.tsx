@@ -96,6 +96,7 @@ interface MicroBarChartProps {
   xKey: string;
   yKey: string;
   barColor?: string;
+  barColors?: string[]; // Array of colors per bar (for alternating colors)
   layout?: "horizontal" | "vertical";
   isLoading?: boolean;
   height?: string;
@@ -106,6 +107,7 @@ export const MicroBarChart = memo(function MicroBarChart({
   xKey,
   yKey,
   barColor = "var(--color-primary)",
+  barColors,
   layout = "vertical",
   isLoading = false,
   height = "var(--dash-chart-height, 60px)",
@@ -151,7 +153,7 @@ export const MicroBarChart = memo(function MicroBarChart({
           />
           <Bar dataKey={layout === "vertical" ? yKey : xKey} radius={[0, 2, 2, 0]} barSize={16}>
             {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color || barColor} />
+              <Cell key={`cell-${index}`} fill={entry.color || barColors?.[index] || barColor} />
             ))}
           </Bar>
         </BarChart>
