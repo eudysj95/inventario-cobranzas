@@ -133,16 +133,6 @@
   --tenant-logo: none;
 }
 
-/* Tenant runtime values — applied via inline style on :root in App.jsx */
-:root {
-  --color-primary: var(--tenant-primary);
-  --color-primary-hover: var(--tenant-primary-hover);
-  --color-primary-light: var(--tenant-primary-light);
-  --color-primary-text: var(--tenant-primary-text);
-  --color-bg: var(--tenant-bg);
-  --color-surface: var(--tenant-surface);
-  --font-sans: var(--tenant-font);
-}
 
 /* High contrast mode support */
 @media (prefers-contrast: high) {

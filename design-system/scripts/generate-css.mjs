@@ -159,19 +159,6 @@ function generateCSS(tokens, outputPath) {
 
 `;
 
-  // Second :root block for runtime tenant application
-  css += `/* Tenant runtime values — applied via inline style on :root in App.jsx */
-:root {
-  --color-primary: var(--tenant-primary);
-  --color-primary-hover: var(--tenant-primary-hover);
-  --color-primary-light: var(--tenant-primary-light);
-  --color-primary-text: var(--tenant-primary-text);
-  --color-bg: var(--tenant-bg);
-  --color-surface: var(--tenant-surface);
-  --font-sans: var(--tenant-font);
-}
-`;
-
   // Dark mode — DESACTIVADO temporalmente (solo light mode)
   // if (Object.keys(dm).length > 0) {
   //   css += `
