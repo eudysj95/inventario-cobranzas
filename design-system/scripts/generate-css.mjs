@@ -21,6 +21,7 @@ function generateCSS(tokens, outputPath) {
   const hc = tokens.highContrast || {};
   const rm = tokens.reducedMotion || {};
   const pr = tokens.print || {};
+  const lt = tokens.layout || {};
 
   let css = `/* Nexo — Design Tokens
    Single source of truth for color, spacing, typography, shadows, radius, transitions.
@@ -141,11 +142,15 @@ function generateCSS(tokens, outputPath) {
   --touch-target: ${tt.default.value};
   --touch-target-sm: ${tt.sm.value};
 
-  /* === CONTAINER === */
+/* === CONTAINER === */
   --container-max: ${cn.max.value};
   --container-padding: ${cn.padding.value};
 
- /* === TENANT OVERRIDES (injected at runtime via /api/config) === */
+  /* === LAYOUT === */
+  --sidebar-width: ${tokens.layout.sidebarWidth.value};
+  --sidebar-collapsed: ${tokens.layout.sidebarCollapsed.value};
+
+  /* === TENANT OVERRIDES (injected at runtime via /api/config) === */
   --tenant-primary: ${tn.primary.value};
   --tenant-primary-hover: ${tn.primaryHover.value};
   --tenant-primary-light: ${tn.primaryLight.value};
