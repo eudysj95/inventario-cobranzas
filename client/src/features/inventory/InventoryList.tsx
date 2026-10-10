@@ -229,14 +229,14 @@ export default function InventoryList() {
         </Card>
       ) : (
         <Card>
-          <div className="table-wrap" role="region" aria-label="Lista de productos" tabIndex={0}>
+          <div className="table-wrap" role="region" aria-label="Lista de productos" tabIndex={0} style={{ overflowX: 'auto' }}>
             <table className="table">
               <thead>
                 <tr>
                   <th scope="col">Producto</th>
-                  <th scope="col">Unidades</th>
+                  <th scope="col" className="hide-mobile">Unidades</th>
                   <th scope="col">Precio</th>
-                  <th scope="col">Última actualización</th>
+                  <th scope="col" className="hide-mobile">Última actualización</th>
                   <th scope="col">Acciones</th>
                 </tr>
               </thead>

@@ -136,17 +136,18 @@ export default function DashboardPage() {
         </button>
       </header>
 
-      {/* KPI Scroll Strip (mobile) / Row (desktop) */}
+{/* KPI Scroll Strip (mobile) / Row (desktop) */}
       <div
         data-testid="kpi-strip"
         className="kpi-strip"
         style={{
           display: 'flex',
+          flexWrap: 'wrap',
           gap: 'var(--dash-gap)',
           overflowX: 'auto',
           scrollSnapType: 'x mandatory',
           paddingBottom: 'var(--space-2)',
-          paddingRight: 'var(--space-4)',  /* peek de la 3ra tarjeta */
+          paddingRight: 'var(--space-4)',
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
           position: 'relative',
@@ -276,10 +277,9 @@ function KPICard({ title, value, icon }) {
       className="kpi-card"
       style={{
         flex: '0 0 auto',
-        width: '260px',
-        scrollSnapAlign: 'start',
-        minWidth: '240px',
+        minWidth: '200px',
         maxWidth: '280px',
+        scrollSnapAlign: 'start',
       }}
     >
       <div className="card" style={{ minHeight: 0 }}>
