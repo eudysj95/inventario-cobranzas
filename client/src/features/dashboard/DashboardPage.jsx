@@ -151,7 +151,7 @@ export default function DashboardPage() {
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
           position: 'relative',
-          zIndex: 5,
+          zIndex: 20,
           minHeight: '100px',
         }}
       >
@@ -173,7 +173,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Main Content Grid: Chart (2/3) + Movements (1/3) on desktop, stacked on mobile */}
-      <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 'var(--dash-gap)' }}>
+      <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 'var(--dash-gap)', position: 'relative', zIndex: 1 }}>
         {/* Ingresos (7 días) Chart Card */}
         <section className="card" style={{ minHeight: 0 }}>
           <header className="card-header" style={{ padding: 'var(--space-3) var(--space-4)', borderBottom: '1px solid var(--color-border)' }}>
