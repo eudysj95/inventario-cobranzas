@@ -176,13 +176,6 @@ describe('Header', () => {
     expect(header).toHaveAttribute('role', 'banner');
   });
 
-  it('shows sidebar toggle on tablet/desktop when provided', () => {
-    renderHeader({ onSidebarToggle: vi.fn(), sidebarCollapsed: false });
-
-    const toggleBtn = screen.getByRole('button', { name: /colapsar barra lateral/i });
-    expect(toggleBtn).toBeInTheDocument();
-  });
-
   it('applies tenant brand from config in breadcrumbs', () => {
     renderHeader();
 

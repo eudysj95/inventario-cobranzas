@@ -118,8 +118,6 @@ function AppShell() {
             userRole="Administrador"
             onLogout={handleLogout}
             onMenuClick={() => setNavOpen(true)}
-            onSidebarToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-            sidebarCollapsed={sidebarCollapsed}
           />
         }
       >

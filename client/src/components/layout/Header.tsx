@@ -14,8 +14,6 @@ interface HeaderProps {
   userRole?: string;
   onLogout?: () => void;
   onMenuClick?: () => void;
-  onSidebarToggle?: () => void;
-  sidebarCollapsed?: boolean;
 }
 
 const ICONS = {
@@ -80,8 +78,6 @@ export default function Header({
   userRole,
   onLogout,
   onMenuClick,
-  onSidebarToggle,
-  sidebarCollapsed,
 }: HeaderProps) {
   const { data: config } = useConfig();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -123,19 +119,6 @@ const businessName = config?.businessName ?? 'Nexo';
               aria-controls="nav-drawer"
             >
               {ICONS.menu}
-            </button>
-          )}
-
-          {/* Sidebar toggle for tablet/desktop */}
-          {onSidebarToggle && (
-            <button
-              type="button"
-              className="btn btn-ghost header-sidebar-toggle hide-mobile"
-              onClick={onSidebarToggle}
-              aria-label={sidebarCollapsed ? 'Expandir barra lateral' : 'Colapsar barra lateral'}
-              aria-expanded={!sidebarCollapsed}
-            >
-              {sidebarCollapsed ? ICONS.chevronRight : ICONS.chevronLeft}
             </button>
           )}
 
