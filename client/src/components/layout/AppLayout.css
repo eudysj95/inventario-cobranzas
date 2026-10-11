@@ -14,6 +14,11 @@
   width: 100%;
 }
 
+/* When sidebar is collapsed, adjust grid column */
+.app-layout:has(.sidebar.collapsed) {
+  grid-template-columns: var(--sidebar-collapsed) 1fr;
+}
+
 /* Sidebar area */
 .sidebar {
   grid-area: sidebar;
