@@ -57,12 +57,12 @@ async function seedCustomers(pool) {
   for (const { name, phone } of customerNames) {
     if (phone) {
       await pool.query(
-        'INSERT INTO customers (name, phone) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING id, name, phone',
+        'INSERT INTO customers (name, phone) VALUES ($1, $2) RETURNING id, name, phone',
         [name, phone]
       );
     } else {
       await pool.query(
-        'INSERT INTO customers (name) VALUES ($1) ON CONFLICT DO NOTHING RETURNING id, name, phone',
+        'INSERT INTO customers (name) VALUES ($1) RETURNING id, name, phone',
         [name]
       );
     }
@@ -73,7 +73,7 @@ async function seedCustomers(pool) {
 async function seedProducts(pool) {
   for (const { name, price, quantity } of productNames) {
     await pool.query(
-      'INSERT INTO products (name, price, quantity) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING RETURNING id, name, price, quantity',
+      'INSERT INTO products (name, price, quantity) VALUES ($1, $2, $3) RETURNING id, name, price, quantity',
       [name, price, quantity]
     );
   }
