@@ -34,5 +34,6 @@ databases:
     # This creates a free PostgreSQL instance (1 GB, 90-day retention)
     # The connection string will be available as DATABASE_URL environment variable
 
-# Pre-deploy: run migration + seed production data (clothing store data)
-preDeployCommand: npm run db:migrate --workspace server && npm run seed:prod --workspace server
+# Pre-deploy: run migration + TRUNCATE + seed production data (clothing store data)
+# TRUNCATE forces clean seed even if tables have residual data from failed attempts
+preDeployCommand: npm run db:migrate --workspace server && echo "TRUNCATE customers, products, apartados, customer_debts, cash_sales, apartado_payments, payments, payment_allocations, supplier_debts, supplier_payments, suppliers RESTART IDENTITY CASCADE;" | psql $DATABASE_URL && npm run seed:prod --workspace server
