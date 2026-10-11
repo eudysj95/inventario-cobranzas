@@ -149,6 +149,13 @@ function generateCSS(tokens, outputPath) {
   /* === LAYOUT === */
   --sidebar-width: ${tokens.layout.sidebarWidth.value};
   --sidebar-collapsed: ${tokens.layout.sidebarCollapsed.value};
+  --dash-gap: ${tokens.layout.dashboardGap.value};
+  --dash-space-1: ${tokens.layout.dashboardSpace1.value};
+  --dash-space-2: ${tokens.layout.dashboardSpace2.value};
+  --dash-space-3: ${tokens.layout.dashboardSpace3.value};
+  --dash-text-xl: ${tokens.layout.dashboardTextXl.value};
+  --dash-text-base: ${tokens.layout.dashboardTextBase.value};
+  --dash-chart-height: ${tokens.layout.dashboardChartHeight.value};
 
   /* === TENANT OVERRIDES (injected at runtime via /api/config) === */
   --tenant-primary: ${tn.primary.value};

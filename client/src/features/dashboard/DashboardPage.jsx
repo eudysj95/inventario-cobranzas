@@ -91,12 +91,12 @@ function DashboardError({ onRetry }) {
 
   // Mock recent movements for "Últimos movimientos" list
   const recentMovements = [
-    { type: 'rendimiento', title: 'Rendimiento', amount: 1275.00, cantidad: 'USD', precio: 0.00, iconColor: 'green' },
-    { type: 'cobranzas', title: 'Cobranzas', amount: 1685.00, cantidad: 'VES', precio: 0.00, iconColor: 'blue' },
-    { type: 'venta', title: 'Venta: Producto A', amount: 950.00, cantidad: 30.00, precio: 1.75, currency: 'VES', iconColor: 'green' },
-    { type: 'abono', title: 'Abono: Cliente B', amount: 300.00, cantidad: 30.00, precio: 'AS 30.00', iconColor: 'blue' },
-    { type: 'gasto', title: 'Gasto: Oficina', amount: 150.00, cantidad: 50.00, precio: 12.00, currency: 'VES', iconColor: 'red' },
-    { type: 'venta', title: 'Venta: Producto A', amount: 200.00, cantidad: 30.00, iconColor: 'green' },
+    { type: 'rendimiento', title: 'Rendimiento', amount: 1275.00, cantidad: 1, precio: 1275.00, currency: 'USD', iconColor: 'green' },
+    { type: 'cobranzas', title: 'Cobranzas', amount: 1685.00, cantidad: 1, precio: 1685.00, currency: 'VES', iconColor: 'blue' },
+    { type: 'venta', title: 'Venta: Producto A', amount: 950.00, cantidad: 30, precio: 1.75, currency: 'VES', iconColor: 'green' },
+    { type: 'abono', title: 'Abono: Cliente B', amount: 300.00, cantidad: 1, precio: 300.00, iconColor: 'blue' },
+    { type: 'gasto', title: 'Gasto: Oficina', amount: 150.00, cantidad: 1, precio: 150.00, currency: 'VES', iconColor: 'red' },
+    { type: 'venta', title: 'Venta: Producto A', amount: 200.00, cantidad: 2, precio: 100.00, iconColor: 'green' },
   ];
 
   return (

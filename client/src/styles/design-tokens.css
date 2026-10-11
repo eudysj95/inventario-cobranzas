@@ -117,11 +117,22 @@
   --touch-target: 44px;
   --touch-target-sm: 36px;
 
-  /* === CONTAINER === */
+ /* === CONTAINER === */
   --container-max: 1280px;
   --container-padding: var(--space-4);
 
- /* === TENANT OVERRIDES (injected at runtime via /api/config) === */
+  /* === LAYOUT === */
+  --sidebar-width: 280px;
+  --sidebar-collapsed: 72px;
+  --dash-gap: 1rem;
+  --dash-space-1: 0.25rem;
+  --dash-space-2: 0.5rem;
+  --dash-space-3: 0.75rem;
+  --dash-text-xl: 1.25rem;
+  --dash-text-base: 0.9375rem;
+  --dash-chart-height: 280px;
+
+  /* === TENANT OVERRIDES (injected at runtime via /api/config) === */
   --tenant-primary: var(--color-primary);
   --tenant-primary-hover: var(--color-primary-hover);
   --tenant-primary-light: var(--color-primary-light);
