@@ -34,5 +34,5 @@ databases:
     # This creates a free PostgreSQL instance (1 GB, 90-day retention)
     # The connection string will be available as DATABASE_URL environment variable
 
-# Optional: run migration on first deploy (server does it on boot, but this is explicit)
-# preDeployCommand: npm run db:migrate --workspace server
+# Pre-deploy: run migration + seed production data (clothing store data)
+preDeployCommand: npm run db:migrate --workspace server && npm run seed:prod --workspace server
