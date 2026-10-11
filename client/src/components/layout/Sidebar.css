@@ -13,7 +13,7 @@
   position: sticky;
   top: 0;
   z-index: var(--z-sticky);
-  transition: width var(--transition-normal) ease;
+  transition: width var(--transition-normal) ease, background-color var(--transition-normal) ease;
   color: var(--color-primary-text);
 }
 
@@ -227,6 +227,35 @@
 /* ===== COLLAPSED STATE ===== */
 .sidebar.collapsed {
   width: var(--sidebar-collapsed);
+  background: var(--color-primary-hover);
+}
+
+.sidebar.collapsed .sidebar-brand {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar.collapsed .sidebar-nav-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar.collapsed .sidebar-nav-link.nav-link-active {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.sidebar.collapsed .user-logout-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.sidebar.collapsed .user-logout-btn:focus-visible {
+  outline-color: var(--color-primary-text);
+}
+
+.sidebar.collapsed .sidebar-toggle:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.sidebar.collapsed .user-logout-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .sidebar.collapsed .sidebar-brand-name,
