@@ -1,7 +1,6 @@
-# Render Blueprint for Nexo (single Web Service: API + SPA)
+# Render Blueprint for Nexo (Web Service + PostgreSQL)
 # Deploy: push to main → Render auto-builds & deploys
-# Required env vars in Render dashboard:
-#   - DATABASE_URL (Neon connection string, sslmode=require)
+# Required env vars in Render dashboard (Environment tab):
 #   - ADMIN_USERNAME (e.g. admin)
 #   - ADMIN_PASSWORD (strong password, will be bcrypt-hashed)
 #   - JWT_SECRET (long random string, REQUIRED in production)
@@ -12,30 +11,28 @@
 
 services:
   - type: web
-    name: nexo
+    name: nexo-app
     runtime: node
     plan: free
     # Build: install deps (root + workspaces) + build client (Vite → client/dist)
-    # Render clones to /opt/render/project/src — install root (hoists vite & plugin-react), then build client
-    # Root dependencies ensure .vite-temp in root node_modules can resolve vite & plugin-react via ES modules
-    # Install all workspace deps (server + client) for start command
-    buildCommand: npm ci --workspaces --include-workspace-root && cd client && node ../node_modules/vite/bin/vite.js build
+    # Root deps ensure vite & plugin-react are available via ES modules
+    buildCommand: npm ci --workspaces --include-workspace-root && npm run build --workspace=client
     # Start: run Express server (serves API + SPA from client/dist)
-    startCommand: npm run start --workspace server
+    startCommand: npm run start --workspace=server
     # Health check endpoint (no auth, hits /health)
     healthCheckPath: /health
-    # Environment variables (set these in Render dashboard, NOT here)
+    # Environment variables (set these in Render dashboard → Environment tab)
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: "3001"
-    # Optional: run migration on first deploy (server does it on boot, but this is explicit)
-    # preDeployCommand: npm run db:migrate --workspace server
 
-# PostgreSQL is external (Neon free tier) — not managed by Render
-# If you want Render-managed Postgres instead, add:
-# databases:
-#   - name: inventario-db
-#     plan: free
-# And then use the internal connection string as DATABASE_URL
+databases:
+  - name: nexo-db
+    plan: free
+    # This creates a free PostgreSQL instance (1 GB, 90-day retention)
+    # The connection string will be available as DATABASE_URL environment variable
+
+# Optional: run migration on first deploy (server does it on boot, but this is explicit)
+# preDeployCommand: npm run db:migrate --workspace server
