@@ -134,46 +134,10 @@ export default function DashboardPage() {
         >
           ⟳
         </button>
-      </header>
-
-{/* KPI Scroll Strip (mobile) / Row (desktop) */}
-      <div
-        data-testid="kpi-strip"
-        className="kpi-strip"
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: 'var(--dash-gap)',
-          overflowX: 'auto',
-          scrollSnapType: 'x mandatory',
-          paddingBottom: 'var(--space-2)',
-          paddingRight: 'var(--space-4)',
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
-          position: 'relative',
-          zIndex: 20,
-          minHeight: '100px',
-        }}
-      >
-        <KPICard
-          title="Ventas del día"
-          value={formatCurrency(ventasDelDia, config)}
-          icon="💰"
-        />
-        <KPICard
-          title="Cuentas por cobrar"
-          value={formatCurrency(cuentasPorCobrar, config)}
-          icon="📞"
-        />
-        <KPICard
-          title="Valor del inventario"
-          value={formatCurrency(valorInventario, config)}
-          icon="📦"
-        />
-      </div>
+</header>
 
       {/* Main Content Grid: Chart (2/3) + Movements (1/3) on desktop, stacked on mobile */}
-      <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 'var(--dash-gap)', position: 'relative', zIndex: 1 }}>
+      <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 'var(--dash-gap)' }}>
         {/* Ingresos (7 días) Chart Card */}
         <section className="card" style={{ minHeight: 0 }}>
           <header className="card-header" style={{ padding: 'var(--space-3) var(--space-4)', borderBottom: '1px solid var(--color-border)' }}>
@@ -256,6 +220,42 @@ export default function DashboardPage() {
             </ul>
           </div>
         </section>
+      </div>
+
+      {/* KPI Scroll Strip (mobile) / Row (desktop) - rendered LAST to stay on top */}
+      <div
+        data-testid="kpi-strip"
+        className="kpi-strip"
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 'var(--dash-gap)',
+          overflowX: 'auto',
+          scrollSnapType: 'x mandatory',
+          paddingBottom: 'var(--space-2)',
+          paddingRight: 'var(--space-4)',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          position: 'relative',
+          zIndex: 100,
+          minHeight: '100px',
+        }}
+      >
+        <KPICard
+          title="Ventas del día"
+          value={formatCurrency(ventasDelDia, config)}
+          icon="💰"
+        />
+        <KPICard
+          title="Cuentas por cobrar"
+          value={formatCurrency(cuentasPorCobrar, config)}
+          icon="📞"
+        />
+        <KPICard
+          title="Valor del inventario"
+          value={formatCurrency(valorInventario, config)}
+          icon="📦"
+        />
       </div>
 
       {/* Pull-to-refresh touch handlers */}
