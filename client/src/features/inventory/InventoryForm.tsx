@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useConfig } from "../../api/config";
-import { useProductMutations, quantityAdjustmentBody } from "../../api/products";
+import { useProduct, useProductMutations, quantityAdjustmentBody } from "../../api/products";
 import { formatCurrency } from "../../lib/format";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
@@ -44,12 +44,28 @@ export default function InventoryForm({ mode, product: initialProduct, onSubmit 
   const isEdit = mode === "edit";
   const productId = params.id || initialProduct?.id;
 
-  const [name, setName] = useState(initialProduct?.name ?? "");
-  const [description, setDescription] = useState(initialProduct?.description ?? "");
-  const [price, setPrice] = useState(initialProduct ? String(initialProduct.price) : "");
-  const [quantity, setQuantity] = useState(initialProduct ? String(initialProduct.quantity) : "");
+  // Fetch product data when in edit mode and we have an ID
+  const { data: productData, isPending: isLoadingProduct } = useProduct(productId);
+
+  // Use fetched product data in edit mode, fallback to initialProduct prop
+  const product = isEdit ? (productData?.product ?? initialProduct) : initialProduct;
+
+  const [name, setName] = useState(product?.name ?? "");
+  const [description, setDescription] = useState(product?.description ?? "");
+  const [price, setPrice] = useState(product ? String(product.price) : "");
+  const [quantity, setQuantity] = useState(product ? String(product.quantity) : "");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Reset form when product data loads (in edit mode)
+  useEffect(() => {
+    if (isEdit && product && !isLoadingProduct) {
+      setName(product.name ?? "");
+      setDescription(product.description ?? "");
+      setPrice(String(product.price));
+      setQuantity(String(product.quantity));
+    }
+  }, [product, isEdit, isLoadingProduct]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -70,14 +86,14 @@ export default function InventoryForm({ mode, product: initialProduct, onSubmit 
 
     setSubmitting(true);
     try {
-      if (isEdit && productId) {
+      if (isEdit && productId && product) {
         const patch: any = {};
-        if (values.name.trim() !== initialProduct?.name) patch.name = values.name.trim();
-        if (values.description.trim() !== (initialProduct?.description ?? "")) {
+        if (values.name.trim() !== product.name) patch.name = values.name.trim();
+        if (values.description.trim() !== (product.description ?? "")) {
           patch.description = values.description.trim() || null;
         }
-        if (values.price !== initialProduct?.price) patch.price = values.price;
-        Object.assign(patch, quantityAdjustmentBody(initialProduct?.quantity ?? 0, values.quantity));
+        if (values.price !== product.price) patch.price = values.price;
+        Object.assign(patch, quantityAdjustmentBody(product.quantity ?? 0, values.quantity));
         
         if (Object.keys(patch).length > 0) {
           await update(productId, patch);
@@ -112,9 +128,9 @@ export default function InventoryForm({ mode, product: initialProduct, onSubmit 
     <div style={{ padding: "var(--space-4) 0", maxWidth: "48rem" }}>
       <header className="flex items-center justify-between gap-3 mb-4 flex-wrap" style={{ alignItems: "center" }}>
         <h2 style={{ margin: 0, fontSize: "var(--text-2xl)" }}>
-          {isEdit ? `Editar producto: ${initialProduct?.name}` : "Nuevo producto"}
+          {isEdit && isLoadingProduct ? "Cargando producto…" : isEdit ? `Editar producto: ${product?.name ?? "—"}` : "Nuevo producto"}
         </h2>
-        <Button variant="secondary" onClick={handleCancel}>
+        <Button variant="secondary" onClick={handleCancel} disabled={isLoadingProduct}>
           Volver
         </Button>
       </header>
@@ -133,10 +149,10 @@ export default function InventoryForm({ mode, product: initialProduct, onSubmit 
       <Card>
         <form onSubmit={handleSubmit} noValidate>
           <div className="card-body">
-            {isEdit && (
+            {isEdit && product && (
               <div className="form-row" style={{ marginBottom: "var(--space-3)", padding: "var(--space-2)", background: "var(--color-bg)", borderRadius: "var(--radius-md)" }}>
                 <strong style={{ fontSize: "var(--text-sm)" }}>Estado actual: </strong>
-                <span className="chip chip-info">{initialProduct?.quantity > 0 ? "Disponible" : "Sin stock"}</span>
+                <span className="chip chip-info">{product.quantity > 0 ? "Disponible" : "Sin stock"}</span>
               </div>
             )}
 
@@ -148,7 +164,7 @@ export default function InventoryForm({ mode, product: initialProduct, onSubmit 
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   autoFocus
-                  disabled={submitting}
+                  disabled={submitting || isLoadingProduct}
                   placeholder="Ej: Remera negra talle M"
                 />
               </Field>
@@ -159,7 +175,7 @@ export default function InventoryForm({ mode, product: initialProduct, onSubmit 
                   type="text"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  disabled={submitting}
+                  disabled={submitting || isLoadingProduct}
                   placeholder="Detalles, talles, colores, etc."
                 />
               </Field>
@@ -173,7 +189,7 @@ export default function InventoryForm({ mode, product: initialProduct, onSubmit 
                     step="0.01"
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
-                    disabled={submitting}
+                    disabled={submitting || isLoadingProduct}
                     placeholder="0.00"
                   />
                 </Field>
@@ -185,15 +201,15 @@ export default function InventoryForm({ mode, product: initialProduct, onSubmit 
                     step="1"
                     value={quantity}
                     onChange={(e) => setQuantity(e.target.value)}
-                    disabled={submitting}
+                    disabled={submitting || isLoadingProduct}
                     placeholder="0"
                   />
                 </Field>
               </div>
 
-              {isEdit && initialProduct && (
+              {isEdit && product && (
                 <p className="form-hint" style={{ fontSize: "var(--text-xs)", color: "var(--color-text-secondary)", margin: 0 }}>
-                  El stock es un ajuste: ingrese un valor mayor al stock actual ({initialProduct.quantity}) para
+                  El stock es un ajuste: ingrese un valor mayor al stock actual ({product.quantity}) para
                   reponer unidades, o menor para quitarlas. El stock nunca puede ser menor a cero.
                 </p>
               )}
@@ -201,10 +217,10 @@ export default function InventoryForm({ mode, product: initialProduct, onSubmit 
           </div>
 
           <div className="card-footer" style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)", paddingTop: "var(--space-4)" }}>
-            <Button type="button" variant="secondary" onClick={handleCancel} disabled={submitting}>
+            <Button type="button" variant="secondary" onClick={handleCancel} disabled={submitting || isLoadingProduct}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" disabled={submitting || isLoadingProduct}>
               {submitting ? (
                 <>
                   <Spinner style={{ width: "16px", height: "16px", borderWidth: "2px" }} aria-hidden="true" />

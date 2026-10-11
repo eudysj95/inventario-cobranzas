@@ -18,6 +18,11 @@ vi.mock("../../api/products", () => ({
     isPending: false,
     isError: false,
   })),
+  useProduct: vi.fn(() => ({
+    data: { product: mockProducts[0] },
+    isPending: false,
+    isError: false,
+  })),
   useProductMutations: vi.fn(() => ({
     create: vi.fn().mockResolvedValue({ id: "3", ...mockProducts[0] }),
     update: vi.fn().mockResolvedValue(mockProducts[0]),
