@@ -271,7 +271,7 @@ function DashboardError({ onRetry }) {
                       {mov.title}
                     </p>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)', fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', lineHeight: 1.3 }}>
-                      <span>Cantidad: <strong>{formatCurrency(mov.cantidad, config)}</strong></span>
+                      <span>Cantidad: <strong>{Number(mov.cantidad).toLocaleString(config.currencyLocale)}</strong></span>
                       {mov.precio !== undefined && mov.precio !== 0 && (
                         <span>Precio unidad: <strong>{mov.currency ? `${mov.currency} ` : ''}${formatCurrency(mov.precio, config)}</strong></span>
                       )}
