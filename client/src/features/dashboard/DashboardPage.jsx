@@ -40,6 +40,100 @@ export default function DashboardPage() {
 
   const stats = data ?? {};
 
+/** KPI Card for scroll strip */
+function KPICard({ title, value, icon }) {
+  return (
+    <div
+      data-testid="kpi-card"
+      className="kpi-card"
+      style={{
+        flex: '0 0 auto',
+        minWidth: '200px',
+        maxWidth: '280px',
+        scrollSnapAlign: 'start',
+      }}
+    >
+      <div className="card" style={{ minHeight: 0 }}>
+        <div className="card-body" style={{ padding: 'var(--space-4)' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--space-3)' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ margin: '0 0 var(--space-1)', fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--color-text-secondary)', lineHeight: 1.2 }}>
+                {title}
+              </p>
+              <p style={{ margin: 0, fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--color-text)', lineHeight: 1.2 }}>
+                {value}
+              </p>
+            </div>
+            <span style={{ fontSize: '20px', opacity: 0.8, flexShrink: 0 }}>{icon}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function getIconBg(color) {
+  switch (color) {
+    case 'green': return 'var(--color-success_light)';
+    case 'blue': return 'var(--color-info_light)';
+    case 'red': return 'var(--color-danger_light)';
+    default: return 'var(--color-primary_light)';
+  }
+}
+
+function getIconColor(color) {
+  switch (color) {
+    case 'green': return 'var(--color-success)';
+    case 'blue': return 'var(--color-info)';
+    case 'red': return 'var(--color-danger)';
+    default: return 'var(--color-primary)';
+  }
+}
+
+function getIconForType(type) {
+  switch (type) {
+    case 'rendimiento': return '⟳';
+    case 'cobranzas': return '$';
+    case 'venta': return '🛒';
+    case 'abono': return '↩';
+    case 'gasto': return '📄';
+    default: return '•';
+  }
+}
+
+/** Skeleton loading state */
+function DashboardSkeleton() {
+  return (
+    <section style={{ padding: 'var(--dash-space-2) 0', display: 'flex', flexDirection: 'column', gap: 'var(--dash-gap)' }}>
+      <header className="flex items-center justify-between gap-2 mb-1">
+        <Skeleton variant="text" width="100px" height="24px" />
+        <Skeleton variant="rectangular" width="60px" height="36px" />
+      </header>
+      <div className="kpi-strip" style={{ display: 'flex', gap: 'var(--dash-gap)', overflowX: 'auto' }}>
+        {[1, 2, 3].map(i => <Skeleton key={i} variant="rectangular" width="260px" height="100px" style={{ flexShrink: 0 }} />)}
+      </div>
+      <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 'var(--dash-gap)' }}>
+        <Skeleton variant="rectangular" width="100%" height="400px" />
+        <Skeleton variant="rectangular" width="100%" height="400px" />
+      </div>
+    </section>
+  );
+}
+
+/** Error state component */
+function DashboardError({ onRetry }) {
+  return (
+    <div className="card" style={{ minHeight: 0 }}>
+      <div style={{ padding: 'var(--space-4)', textAlign: 'center' }}>
+        <div className="skeleton" style={{ width: '24px', height: '24px', borderRadius: '50%', margin: '0 auto var(--space-2)', background: 'var(--color-danger_light)' }} />
+        <h3 style={{ margin: '0 0 var(--space-1)', color: 'var(--color-danger)', fontSize: 'var(--text-base)' }}>Error</h3>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)', margin: '0 0 var(--space-3)' }}>No se cargaron datos del dashboard</p>
+        <button onClick={onRetry} className="btn btn-primary">Reintentar</button>
+      </div>
+    </div>
+  );
+}
+
   // Derived data for mockup KPIs
   const ventasDelDia = stats.sales?.today ?? 0;
   const cuentasPorCobrar = (stats.collections?.overdueToday ?? 0) + (stats.collections?.dueNext3Days ?? 0) + (stats.customers?.totalBalance ?? 0);
@@ -134,7 +228,41 @@ export default function DashboardPage() {
         >
           ⟳
         </button>
-</header>
+      </header>
+
+      {/* KPI Scroll Strip (mobile) / Row (desktop) - rendered FIRST in DOM but visually at top via CSS order */}
+      <div
+        data-testid="kpi-strip"
+        className="kpi-strip"
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 'var(--dash-gap)',
+          overflowX: 'auto',
+          scrollSnapType: 'x mandatory',
+          paddingBottom: 'var(--space-2)',
+          paddingRight: 'var(--space-4)',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          order: -1, // Visually first via CSS order
+        }}
+      >
+        <KPICard
+          title="Ventas del día"
+          value={formatCurrency(ventasDelDia, config)}
+          icon="💰"
+        />
+        <KPICard
+          title="Cuentas por cobrar"
+          value={formatCurrency(cuentasPorCobrar, config)}
+          icon="📞"
+        />
+        <KPICard
+          title="Valor del inventario"
+          value={formatCurrency(valorInventario, config)}
+          icon="📦"
+        />
+      </div>
 
       {/* Main Content Grid: Chart (2/3) + Movements (1/3) on desktop, stacked on mobile */}
       <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 'var(--dash-gap)' }}>
@@ -222,42 +350,6 @@ export default function DashboardPage() {
         </section>
       </div>
 
-      {/* KPI Scroll Strip (mobile) / Row (desktop) - rendered LAST to stay on top */}
-      <div
-        data-testid="kpi-strip"
-        className="kpi-strip"
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: 'var(--dash-gap)',
-          overflowX: 'auto',
-          scrollSnapType: 'x mandatory',
-          paddingBottom: 'var(--space-2)',
-          paddingRight: 'var(--space-4)',
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
-          position: 'relative',
-          zIndex: 100,
-          minHeight: '100px',
-        }}
-      >
-        <KPICard
-          title="Ventas del día"
-          value={formatCurrency(ventasDelDia, config)}
-          icon="💰"
-        />
-        <KPICard
-          title="Cuentas por cobrar"
-          value={formatCurrency(cuentasPorCobrar, config)}
-          icon="📞"
-        />
-        <KPICard
-          title="Valor del inventario"
-          value={formatCurrency(valorInventario, config)}
-          icon="📦"
-        />
-      </div>
-
       {/* Pull-to-refresh touch handlers */}
       <div
         style={{ height: 0 }}
@@ -266,98 +358,5 @@ export default function DashboardPage() {
         onTouchEnd={onTouchEnd}
       />
     </section>
-  );
-}
-
-/** KPI Card for scroll strip */
-function KPICard({ title, value, icon }) {
-  return (
-    <div
-      data-testid="kpi-card"
-      className="kpi-card"
-      style={{
-        flex: '0 0 auto',
-        minWidth: '200px',
-        maxWidth: '280px',
-        scrollSnapAlign: 'start',
-      }}
-    >
-      <div className="card" style={{ minHeight: 0 }}>
-        <div className="card-body" style={{ padding: 'var(--space-4)' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--space-3)' }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin: '0 0 var(--space-1)', fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--color-text-secondary)', lineHeight: 1.2 }}>
-                {title}
-              </p>
-              <p style={{ margin: 0, fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--color-text)', lineHeight: 1.2 }}>
-                {value}
-              </p>
-            </div>
-            <span style={{ fontSize: '20px', opacity: 0.8, flexShrink: 0 }}>{icon}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function getIconBg(color) {
-  switch (color) {
-    case 'green': return 'var(--color-success-light)';
-    case 'blue': return 'var(--color-info-light)';
-    case 'red': return 'var(--color-danger-light)';
-    default: return 'var(--color-primary-light)';
-  }
-}
-
-function getIconColor(color) {
-  switch (color) {
-    case 'green': return 'var(--color-success)';
-    case 'blue': return 'var(--color-info)';
-    case 'red': return 'var(--color-danger)';
-    default: return 'var(--color-primary)';
-  }
-}
-
-function getIconForType(type) {
-  switch (type) {
-    case 'rendimiento': return '⟳';
-    case 'cobranzas': return '$';
-    case 'venta': return '🛒';
-    case 'abono': return '↩';
-    case 'gasto': return '📄';
-    default: return '•';
-  }
-}
-
-/** Skeleton loading state */
-function DashboardSkeleton() {
-  return (
-    <section style={{ padding: 'var(--dash-space-2) 0', display: 'flex', flexDirection: 'column', gap: 'var(--dash-gap)' }}>
-      <header className="flex items-center justify-between gap-2 mb-1">
-        <Skeleton variant="text" width="100px" height="24px" />
-        <Skeleton variant="rectangular" width="60px" height="36px" />
-      </header>
-      <div className="kpi-strip" style={{ display: 'flex', gap: 'var(--dash-gap)', overflowX: 'auto' }}>
-        {[1, 2, 3].map(i => <Skeleton key={i} variant="rectangular" width="260px" height="100px" style={{ flexShrink: 0 }} />)}
-      </div>
-      <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 'var(--dash-gap)' }}>
-        <Skeleton variant="rectangular" width="100%" height="400px" />
-        <Skeleton variant="rectangular" width="100%" height="400px" />
-      </div>
-    </section>
-  );
-}
-
-function DashboardError({ onRetry }) {
-  return (
-    <div className="card" style={{ minHeight: 0 }}>
-      <div style={{ padding: 'var(--space-4)', textAlign: 'center' }}>
-        <div className="skeleton" style={{ width: '24px', height: '24px', borderRadius: '50%', margin: '0 auto var(--space-2)', background: 'var(--color-danger-light)' }} />
-        <h3 style={{ margin: '0 0 var(--space-1)', color: 'var(--color-danger)', fontSize: 'var(--text-base)' }}>Error</h3>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)', margin: '0 0 var(--space-3)' }}>No se cargaron datos del dashboard</p>
-        <button onClick={onRetry} className="btn btn-primary">Reintentar</button>
-      </div>
-    </div>
   );
 }
