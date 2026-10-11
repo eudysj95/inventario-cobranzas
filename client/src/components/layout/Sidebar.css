@@ -227,7 +227,6 @@
 /* ===== COLLAPSED STATE ===== */
 .sidebar.collapsed {
   width: var(--sidebar-collapsed);
-  background: var(--color-primary-hover);
 }
 
 .sidebar.collapsed .sidebar-brand {

@@ -111,6 +111,7 @@ function AppShell() {
             onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
           />
         }
+        sidebarClassName={sidebarCollapsed ? 'collapsed' : ''}
         header={
           <Header
             breadcrumbs={breadcrumbs}
