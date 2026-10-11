@@ -11,7 +11,7 @@ describe("Select", () => {
 
   it("renders select with label and options", () => {
     render(<Select label="Choose" id="select" options={options} />);
-    expect(screen.getByLabelText("Choose")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Choose/)).toBeInTheDocument();
     expect(screen.getByRole("combobox")).toBeInTheDocument();
     expect(screen.getByText("Select an option")).toBeInTheDocument();
     expect(screen.getByText("Option A")).toBeInTheDocument();
@@ -56,7 +56,8 @@ describe("Select", () => {
     const { container } = render(<Select label="Auto ID" options={options} />);
     const select = container.querySelector("select");
     expect(select).toHaveAttribute("id");
-    expect(select?.id).toMatch(/^select-/);
+    // useId() generates IDs like :r0:, :r1: etc.
+    expect(select?.id).toBeTruthy();
   });
 
   it("renders placeholder option when value is empty", () => {

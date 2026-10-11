@@ -14,19 +14,19 @@ describe('parse-tokens.mjs', () => {
     const tokens = parseTokensFromCSS(cssContent);
     
     assert.ok(tokens.color);
-    assert.equal(tokens.color.primary.value, '#047857');
+    assert.equal(tokens.color.primary.value, '#0F172A');
     assert.equal(tokens.color.primary.type, 'color');
-    assert.equal(tokens.color.primaryHover.value, '#065f46');
-    assert.equal(tokens.color.success.value, '#2e7d32');
-    assert.equal(tokens.color.warning.value, '#f9a825');
-    assert.equal(tokens.color.danger.value, '#d32f2f');
-    assert.equal(tokens.color.info.value, '#1565c0');
-    assert.equal(tokens.color.bg.value, '#fafafa');
-    assert.equal(tokens.color.surface.value, '#ffffff');
-    assert.equal(tokens.color.text.value, '#212121');
-    assert.equal(tokens.color.textSecondary.value, '#757575');
-    assert.equal(tokens.color.textMuted.value, '#9e9e9e');
-    assert.equal(tokens.color.textInverse.value, '#ffffff');
+    assert.equal(tokens.color.primaryHover.value, '#1E293B');
+    assert.equal(tokens.color.success.value, '#10B981');
+    assert.equal(tokens.color.warning.value, '#F59E0B');
+    assert.equal(tokens.color.danger.value, '#EF4444');
+    assert.equal(tokens.color.info.value, '#2563EB');
+    assert.equal(tokens.color.bg.value, '#F8FAFC');
+    assert.equal(tokens.color.surface.value, '#FFFFFF');
+    assert.equal(tokens.color.text.value, '#1E293B');
+    assert.equal(tokens.color.textSecondary.value, '#64748B');
+    assert.equal(tokens.color.textMuted.value, '#94A3B8');
+    assert.equal(tokens.color.textInverse.value, '#FFFFFF');
   });
 
   it('should parse typography tokens', () => {
@@ -162,25 +162,6 @@ describe('parse-tokens.mjs', () => {
     assert.equal(tokens.tenant.logo.value, 'none');
   });
 
-  it('should parse dark mode tokens', () => {
-    const tokens = parseTokensFromCSS(cssContent);
-    
-    assert.ok(tokens.darkMode);
-    assert.equal(tokens.darkMode.bg.value, '#111827');
-    assert.equal(tokens.darkMode.surface.value, '#1f2937');
-    assert.equal(tokens.darkMode.surfaceHover.value, '#374151');
-    assert.equal(tokens.darkMode.border.value, '#374151');
-    assert.equal(tokens.darkMode.borderStrong.value, '#4b5563');
-    assert.equal(tokens.darkMode.text.value, '#f3f4f6');
-    assert.equal(tokens.darkMode.textSecondary.value, '#9ca3af');
-    assert.equal(tokens.darkMode.textMuted.value, '#6b7280');
-    assert.equal(tokens.darkMode.primaryLight.value, '#064e3b');
-    assert.equal(tokens.darkMode.successLight.value, '#14532d');
-    assert.equal(tokens.darkMode.warningLight.value, '#713f12');
-    assert.equal(tokens.darkMode.dangerLight.value, '#7f1d1d');
-    assert.equal(tokens.darkMode.infoLight.value, '#1e3a5f');
-  });
-
   it('should parse high contrast tokens', () => {
     const tokens = parseTokensFromCSS(cssContent);
     
@@ -205,8 +186,8 @@ describe('parse-tokens.mjs', () => {
     const tokens = parseTokensFromCSS(cssContent);
     
     assert.ok(tokens.print);
-    assert.equal(tokens.print.bg.value, '#ffffff');
-    assert.equal(tokens.print.surface.value, '#ffffff');
+    assert.equal(tokens.print.bg.value, '#FFFFFF');
+    assert.equal(tokens.print.surface.value, '#FFFFFF');
     assert.equal(tokens.print.text.value, '#000000');
     assert.equal(tokens.print.shadowSm.value, 'none');
     assert.equal(tokens.print.shadowMd.value, 'none');

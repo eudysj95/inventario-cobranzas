@@ -30,7 +30,8 @@ describe("Table", () => {
     ];
 
     render(<Table columns={columnsWithRenderer} data={data} keyField="id" />);
-    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
+    // Two data rows = two Edit buttons
+    expect(screen.getAllByRole("button", { name: "Edit" })).toHaveLength(2);
   });
 
   it("shows empty state when no data", () => {
@@ -41,7 +42,9 @@ describe("Table", () => {
   it("applies striped rows when striped prop is true", () => {
     render(<Table columns={columns} data={data} keyField="id" striped />);
     const rows = screen.getAllByRole("row");
-    expect(rows[1]).toHaveClass("bg-surface-hover");
+    // rows[0] = header, rows[1] = first data row (index 0, not striped), rows[2] = second data row (index 1, striped)
+    expect(rows[2]).toHaveClass("bg-surface-hover");
+    expect(rows[1]).not.toHaveClass("bg-surface-hover");
   });
 
   it("applies hover effect when hoverable prop is true", () => {
@@ -52,7 +55,8 @@ describe("Table", () => {
 
   it("renders caption when provided", () => {
     render(<Table columns={columns} data={data} keyField="id" caption="User List" />);
-    expect(screen.getByCaptionText("User List")).toBeInTheDocument();
+    // Caption is rendered as <caption className="sr-only"> - query by role or text
+    expect(screen.getByRole("caption")).toHaveTextContent("User List");
   });
 
   it("forwards ref correctly", () => {

@@ -9,7 +9,8 @@ describe("FormField", () => {
         <input type="email" id="email" />
       </FormField>
     );
-    expect(screen.getByLabelText("Email")).toBeInTheDocument();
+    // Label text includes required asterisk
+    expect(screen.getByLabelText(/Email/)).toBeInTheDocument();
     expect(screen.getByText("*")).toBeInTheDocument();
   });
 
@@ -47,7 +48,8 @@ describe("FormField", () => {
         <input id="test" />
       </FormField>
     );
-    expect(screen.getByLabelText("Test").closest("div")).toHaveClass("custom-class");
+    // custom-class is on the wrapper div - get label and check its parent
+    expect(screen.getByText(/Test/).closest("div")).toHaveClass("custom-class");
   });
 
   it("renders without label when not provided", () => {

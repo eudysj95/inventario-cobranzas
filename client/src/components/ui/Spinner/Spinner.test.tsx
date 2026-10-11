@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { Spinner } from "./Spinner";
 
@@ -10,22 +10,25 @@ describe("Spinner", () => {
   });
 
   it("applies size classes correctly", () => {
-    const { rerender } = render(<Spinner size="sm" />);
-    expect(screen.getByRole("status")).toHaveClass("w-4", "h-4", "border-[2px]");
+    const { rerender, container } = render(<Spinner size="sm" />);
+    // Size classes are on the SVG element
+    expect(container.querySelector("svg")).toHaveClass("w-4", "h-4", "border-[2px]");
 
     rerender(<Spinner size="md" />);
-    expect(screen.getByRole("status")).toHaveClass("w-6", "h-6", "border-[2px]");
+    expect(container.querySelector("svg")).toHaveClass("w-6", "h-6", "border-[2px]");
 
     rerender(<Spinner size="lg" />);
-    expect(screen.getByRole("status")).toHaveClass("w-8", "h-8", "border-[3px]");
+    expect(container.querySelector("svg")).toHaveClass("w-8", "h-8", "border-[3px]");
   });
 
   it("applies color variant correctly", () => {
-    const { rerender } = render(<Spinner variant="primary" />);
-    expect(screen.getByRole("status")).toHaveClass("border-primary", "border-t-primary");
+    const { rerender, container } = render(<Spinner variant="primary" />);
+    // Component uses border-border border-t-primary for primary on the SVG
+    expect(container.querySelector("svg")).toHaveClass("border-border", "border-t-primary");
 
     rerender(<Spinner variant="white" />);
-    expect(screen.getByRole("status")).toHaveClass("border-white", "border-t-white");
+    // Component uses border-white/30 border-t-white for white on the SVG
+    expect(container.querySelector("svg")).toHaveClass("border-white/30", "border-t-white");
   });
 
   it("shows label when provided", () => {

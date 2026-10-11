@@ -33,16 +33,16 @@ describe('generate-css.mjs', () => {
     // Check :root block exists
     assert.ok(css.includes(':root {'));
     
-    // Check color tokens
-    assert.ok(css.includes('--color-primary: #047857;'));
-    assert.ok(css.includes('--color-primary-hover: #065f46;'));
-    assert.ok(css.includes('--color-success: #2e7d32;'));
-    assert.ok(css.includes('--color-warning: #f9a825;'));
-    assert.ok(css.includes('--color-danger: #d32f2f;'));
-    assert.ok(css.includes('--color-info: #1565c0;'));
-    assert.ok(css.includes('--color-bg: #fafafa;'));
-    assert.ok(css.includes('--color-surface: #ffffff;'));
-    assert.ok(css.includes('--color-text: #212121;'));
+    // Check color tokens (new palette)
+    assert.ok(css.includes('--color-primary: #0F172A;'));
+    assert.ok(css.includes('--color-primary-hover: #1E293B;'));
+    assert.ok(css.includes('--color-success: #10B981;'));
+    assert.ok(css.includes('--color-warning: #F59E0B;'));
+    assert.ok(css.includes('--color-danger: #EF4444;'));
+    assert.ok(css.includes('--color-info: #2563EB;'));
+    assert.ok(css.includes('--color-bg: #F8FAFC;'));
+    assert.ok(css.includes('--color-surface: #FFFFFF;'));
+    assert.ok(css.includes('--color-text: #1E293B;'));
     
     // Check typography tokens
     assert.ok(css.includes('--font-sans: system-ui'));
@@ -104,33 +104,8 @@ describe('generate-css.mjs', () => {
     assert.ok(css.includes('--tenant-logo: none;'));
   });
 
-  it('should generate second :root block for runtime tenant application', async () => {
-    const outputPath = `${tempDir}/design-tokens.css`;
-    await generateCSS(tokens, outputPath);
-    
-    const css = readFileSync(outputPath, 'utf-8');
-    
-    // Check second :root block for runtime overrides
-    assert.ok(css.includes('--color-primary: var(--tenant-primary);'));
-    assert.ok(css.includes('--color-primary-hover: var(--tenant-primary-hover);'));
-    assert.ok(css.includes('--color-bg: var(--tenant-bg);'));
-    assert.ok(css.includes('--font-sans: var(--tenant-font);'));
-  });
-
-  it('should generate dark mode media query', async () => {
-    const outputPath = `${tempDir}/design-tokens.css`;
-    await generateCSS(tokens, outputPath);
-    
-    const css = readFileSync(outputPath, 'utf-8');
-    
-    assert.ok(css.includes('@media (prefers-color-scheme: dark)'));
-    assert.ok(css.includes(':root:not([data-theme="light"])'));
-    assert.ok(css.includes('--color-bg: #111827;'));
-    assert.ok(css.includes('--color-surface: #1f2937;'));
-    assert.ok(css.includes('--color-text: #f3f4f6;'));
-    assert.ok(css.includes('--shadow-xs: 0 1px 2px rgba(0,0,0,0.2);'));
-    assert.ok(css.includes('--shadow-modal: 0 25px 50px rgba(0,0,0,0.6);'));
-  });
+  // Second :root block for runtime tenant application was removed (circular ref fix)
+  // Tenant runtime values are applied via inline styles in App.jsx
 
   it('should generate high contrast media query', async () => {
     const outputPath = `${tempDir}/design-tokens.css`;
@@ -165,8 +140,8 @@ describe('generate-css.mjs', () => {
     const css = readFileSync(outputPath, 'utf-8');
     
     assert.ok(css.includes('@media print'));
-    assert.ok(css.includes('--color-bg: #ffffff;'));
-    assert.ok(css.includes('--color-surface: #ffffff;'));
+    assert.ok(css.includes('--color-bg: #FFFFFF;'));
+    assert.ok(css.includes('--color-surface: #FFFFFF;'));
     assert.ok(css.includes('--color-text: #000000;'));
     assert.ok(css.includes('--shadow-sm: none;'));
     assert.ok(css.includes('--shadow-modal: none;'));

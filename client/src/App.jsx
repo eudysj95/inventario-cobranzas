@@ -11,14 +11,6 @@ import RequireAuth from './auth/RequireAuth.jsx';
 import LoginPage from './features/auth/LoginPage.tsx'; // New login page (TypeScript)
 import LoginPageLegacy from './features/auth/LoginPage.old.jsx'; // Old login page (fallback)
 import DashboardPage from './features/dashboard/DashboardPage.jsx';
-import InventoryPage from './features/inventory/InventoryPage.jsx';
-import ApartadosPage from './features/apartados/ApartadosPage.jsx';
-import CreditSalesPage from './features/credit/CreditSalesPage.jsx';
-import CashSalesPage from './features/credit/CashSalesPage.jsx';
-import PaymentsPanel from './features/credit/PaymentsPanel.jsx';
-import CollectionsPage from './features/collections/CollectionsPage.jsx';
-import SuppliersPage from './features/suppliers/SuppliersPage.jsx';
-import CustomersPage from './features/customers/CustomersPage.jsx';
 import AppLayout from './components/layout/AppLayout.jsx';
 import Sidebar from './components/layout/Sidebar.jsx';
 import Header from './components/layout/Header.jsx';
@@ -34,6 +26,18 @@ const USE_NEW_LOGIN = import.meta.env.VITE_NEW_LOGIN === 'true';
 
 // Lazy-load the new login page to avoid bundle bloat when feature flag is off
 const NewLoginPage = lazy(() => import('./features/auth/LoginPage.tsx'));
+
+// Lazy-load CRUD pages for code splitting
+const InventoryList = lazy(() => import('./features/inventory/InventoryList.tsx'));
+const InventoryForm = lazy(() => import('./features/inventory/InventoryForm.tsx'));
+const CustomersList = lazy(() => import('./features/customers/CustomersList.tsx'));
+const CustomerForm = lazy(() => import('./features/customers/CustomerForm.tsx'));
+const SuppliersList = lazy(() => import('./features/suppliers/SuppliersList.tsx'));
+const CashSaleForm = lazy(() => import('./features/credit/CashSaleFormNew.tsx'));
+const CreditSaleForm = lazy(() => import('./features/credit/CreditSaleFormNew.tsx'));
+const ApartadoForm = lazy(() => import('./features/apartados/ApartadoFormNew.tsx'));
+const CollectionsList = lazy(() => import('./features/collections/CollectionsList.tsx'));
+const PaymentForm = lazy(() => import('./features/credit/PaymentFormNew.tsx'));
 
 const NAV_ITEMS = [
   { path: '/', label: 'Dashboard', icon: 'dashboard' },
@@ -107,6 +111,7 @@ function AppShell() {
             onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
           />
         }
+        sidebarClassName={sidebarCollapsed ? 'collapsed' : ''}
         header={
           <Header
             breadcrumbs={breadcrumbs}
@@ -114,8 +119,6 @@ function AppShell() {
             userRole="Administrador"
             onLogout={handleLogout}
             onMenuClick={() => setNavOpen(true)}
-            onSidebarToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-            sidebarCollapsed={sidebarCollapsed}
           />
         }
       >
@@ -286,14 +289,39 @@ export default function App() {
       <Route element={<RequireAuth />}>
         <Route element={<AppShell />}>
           <Route index element={<DashboardPage />} />
-          <Route path="inventory" element={<InventoryPage />} />
-          <Route path="clientes" element={<CustomersPage />} />
-          <Route path="apartados" element={<ApartadosPage />} />
-          <Route path="credit-sales" element={<CreditSalesPage />} />
-          <Route path="venta" element={<CashSalesPage />} />
-          <Route path="cobros" element={<CollectionsPage />} />
-          <Route path="payments" element={<PaymentsPanel />} />
-          <Route path="proveedores" element={<SuppliersPage />} />
+          
+          {/* Inventory CRUD */}
+          <Route path="inventory" element={<Suspense fallback={<div className="loading"><div className="spinner" /> Cargando…</div>}><InventoryList /></Suspense>} />
+          <Route path="inventory/new" element={<Suspense fallback={<div className="loading"><div className="spinner" /> Cargando…</div>}><InventoryForm mode="new" /></Suspense>} />
+          <Route path="inventory/:id/edit" element={<Suspense fallback={<div className="loading"><div className="spinner" /> Cargando…</div>}><InventoryForm mode="edit" /></Suspense>} />
+          
+          {/* Customers CRUD */}
+          <Route path="clientes" element={<Suspense fallback={<div className="loading"><div className="spinner" /> Cargando…</div>}><CustomersList /></Suspense>} />
+          <Route path="clientes/new" element={<Suspense fallback={<div className="loading"><div className="spinner" /> Cargando…</div>}><CustomerForm mode="new" /></Suspense>} />
+          <Route path="clientes/:id/edit" element={<Suspense fallback={<div className="loading"><div className="spinner" /> Cargando…</div>}><CustomerForm mode="edit" /></Suspense>} />
+          
+          {/* Suppliers CRUD (debt-based) */}
+          <Route path="proveedores" element={<Suspense fallback={<div className="loading"><div className="spinner" /> Cargando…</div>}><SuppliersList /></Suspense>} />
+          
+          {/* Sales */}
+          <Route path="venta/new" element={<Suspense fallback={<div className="loading"><div className="spinner" /> Cargando…</div>}><CashSaleForm /></Suspense>} />
+          <Route path="credit-sales/new" element={<Suspense fallback={<div className="loading"><div className="spinner" /> Cargando…</div>}><CreditSaleForm /></Suspense>} />
+          
+          {/* Apartados */}
+          <Route path="apartados/new" element={<Suspense fallback={<div className="loading"><div className="spinner" /> Cargando…</div>}><ApartadoForm /></Suspense>} />
+          
+          {/* Collections with WhatsAppHub inline */}
+          <Route path="cobros" element={<Suspense fallback={<div className="loading"><div className="spinner" /> Cargando…</div>}><CollectionsList /></Suspense>} />
+          
+          {/* Payments */}
+          <Route path="payments/new" element={<Suspense fallback={<div className="loading"><div className="spinner" /> Cargando…</div>}><PaymentForm /></Suspense>} />
+          
+          {/* Legacy routes for backward compatibility */}
+          <Route path="apartados" element={<Navigate to="/apartados/new" replace />} />
+          <Route path="credit-sales" element={<Navigate to="/credit-sales/new" replace />} />
+          <Route path="venta" element={<Navigate to="/venta/new" replace />} />
+          <Route path="payments" element={<Navigate to="/payments/new" replace />} />
+          
           <Route path="*" element={<Navigate to="/inventory" replace />} />
         </Route>
       </Route>

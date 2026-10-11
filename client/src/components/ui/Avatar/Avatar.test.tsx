@@ -7,7 +7,8 @@ describe("Avatar", () => {
     render(<Avatar src="/avatar.png" alt="User Name" />);
     const img = screen.getByAltText("User Name");
     expect(img).toHaveAttribute("src", "/avatar.png");
-    expect(img).toHaveClass("rounded-full");
+    // rounded-full is on the container div
+    expect(img.closest("div")).toHaveClass("rounded-full");
   });
 
   it("renders fallback initials when no image", () => {
@@ -22,19 +23,20 @@ describe("Avatar", () => {
 
   it("applies size classes correctly", () => {
     const { rerender } = render(<Avatar name="Test" size="xs" />);
-    expect(screen.getByText("T")).toHaveClass("w-6", "h-6", "text-xs");
+    // Size classes are on the container div
+    expect(screen.getByText("T").closest("div")).toHaveClass("w-6", "h-6", "text-xs");
 
     rerender(<Avatar name="Test" size="sm" />);
-    expect(screen.getByText("T")).toHaveClass("w-8", "h-8", "text-sm");
+    expect(screen.getByText("T").closest("div")).toHaveClass("w-8", "h-8", "text-sm");
 
     rerender(<Avatar name="Test" size="md" />);
-    expect(screen.getByText("T")).toHaveClass("w-10", "h-10", "text-base");
+    expect(screen.getByText("T").closest("div")).toHaveClass("w-10", "h-10", "text-base");
 
     rerender(<Avatar name="Test" size="lg" />);
-    expect(screen.getByText("T")).toHaveClass("w-12", "h-12", "text-lg");
+    expect(screen.getByText("T").closest("div")).toHaveClass("w-12", "h-12", "text-lg");
 
     rerender(<Avatar name="Test" size="xl" />);
-    expect(screen.getByText("T")).toHaveClass("w-16", "h-16", "text-xl");
+    expect(screen.getByText("T").closest("div")).toHaveClass("w-16", "h-16", "text-xl");
   });
 
   it("applies shape classes correctly", () => {

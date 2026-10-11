@@ -5,18 +5,18 @@ import { Input } from "./Input";
 describe("Input", () => {
   it("renders input with label", () => {
     render(<Input label="Email" id="email" />);
-    expect(screen.getByLabelText("Email")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Email/)).toBeInTheDocument();
   });
 
   it("applies type correctly", () => {
-    const { rerender } = render(<Input id="text" type="text" />);
-    expect(screen.getByRole("textbox")).toHaveAttribute("type", "text");
+    const { rerender, container } = render(<Input id="text" type="text" />);
+    expect(container.querySelector("input")).toHaveAttribute("type", "text");
 
     rerender(<Input id="email" type="email" />);
-    expect(screen.getByRole("textbox")).toHaveAttribute("type", "email");
+    expect(container.querySelector("input")).toHaveAttribute("type", "email");
 
     rerender(<Input id="password" type="password" />);
-    expect(screen.getByRole("textbox")).toHaveAttribute("type", "password");
+    expect(container.querySelector("input")).toHaveAttribute("type", "password");
   });
 
   it("handles value and onChange", () => {
@@ -68,6 +68,7 @@ describe("Input", () => {
     const { container } = render(<Input label="Auto ID" />);
     const input = container.querySelector("input");
     expect(input).toHaveAttribute("id");
-    expect(input?.id).toMatch(/^input-/);
+    // useId() generates IDs like :r0:, :r1: etc. - just verify it exists and is unique
+    expect(input?.id).toBeTruthy();
   });
 });
