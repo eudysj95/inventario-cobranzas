@@ -200,23 +200,23 @@ function DashboardError({ onRetry }) {
           </div>
         </section>
 
-        {/* KPI Scroll Strip (mobile) / Row (desktop) - rendered AFTER chart in DOM, visually first via CSS order */}
-        <div
-          data-testid="kpi-strip"
-          className="kpi-strip"
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 'var(--dash-gap)',
-            overflowX: 'auto',
-            scrollSnapType: 'x mandatory',
-            paddingBottom: 'var(--space-2)',
-            paddingRight: 'var(--space-4)',
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none',
-            order: -1, // Visually first via CSS order
-          }}
-        >
+{/* KPI Scroll Strip (mobile) / Row (desktop) - rendered AFTER chart in DOM, visually first via CSS order */}
+      <div
+        data-testid="kpi-strip"
+        className="kpi-strip"
+        style={{
+          display: 'flex',
+          flexWrap: 'nowrap',
+          gap: 'var(--dash-gap)',
+          overflowX: 'auto',
+          scrollSnapType: 'x mandatory',
+          paddingBottom: 'var(--space-2)',
+          paddingRight: 'var(--space-4)',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          order: -1, // Visually first via CSS order
+        }}
+      >
           <KPICard
             title="Ventas del día"
             value={formatCurrency(ventasDelDia, config)}
@@ -307,7 +307,7 @@ function KPICard({ title, value, icon }) {
       data-testid="kpi-card"
       className="kpi-card"
       style={{
-        flex: '0 0 auto',
+        flex: '0 0 33.33%',
         minWidth: '200px',
         maxWidth: '280px',
         scrollSnapAlign: 'start',
