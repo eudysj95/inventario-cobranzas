@@ -39,6 +39,11 @@ const ApartadoForm = lazy(() => import('./features/apartados/ApartadoFormNew.tsx
 const CollectionsList = lazy(() => import('./features/collections/CollectionsList.tsx'));
 const PaymentForm = lazy(() => import('./features/credit/PaymentFormNew.tsx'));
 
+// List pages
+const ApartadosPage = lazy(() => import('./features/apartados/ApartadosPage.jsx'));
+const CreditSalesPage = lazy(() => import('./features/credit/CreditSalesPage.jsx'));
+const CashSalesPage = lazy(() => import('./features/credit/CashSalesPage.jsx'));
+
 const NAV_ITEMS = [
   { path: '/', label: 'Dashboard', icon: 'dashboard' },
   { path: '/inventory', label: 'Inventario', icon: 'inventory' },
@@ -303,24 +308,18 @@ export default function App() {
           {/* Suppliers CRUD (debt-based) */}
           <Route path="proveedores" element={<Suspense fallback={<div className="loading"><div className="spinner" /> Cargando…</div>}><SuppliersList /></Suspense>} />
           
-          {/* Sales */}
-          <Route path="venta/new" element={<Suspense fallback={<div className="loading"><div className="spinner" /> Cargando…</div>}><CashSaleForm /></Suspense>} />
-          <Route path="credit-sales/new" element={<Suspense fallback={<div className="loading"><div className="spinner" /> Cargando…</div>}><CreditSaleForm /></Suspense>} />
+          {/* Sales - Cash sales (contado) */}
+          <Route path="venta" element={<Suspense fallback={<div className="loading"><div className="spinner" /> Cargando…</div>}><CashSalesPage /></Suspense>} />
+          <Route path="credit-sales" element={<Suspense fallback={<div className="loading"><div className="spinner" /> Cargando…</div>}><CreditSalesPage /></Suspense>} />
           
           {/* Apartados */}
-          <Route path="apartados/new" element={<Suspense fallback={<div className="loading"><div className="spinner" /> Cargando…</div>}><ApartadoForm /></Suspense>} />
+          <Route path="apartados" element={<Suspense fallback={<div className="loading"><div className="spinner" /> Cargando…</div>}><ApartadosPage /></Suspense>} />
           
           {/* Collections with WhatsAppHub inline */}
           <Route path="cobros" element={<Suspense fallback={<div className="loading"><div className="spinner" /> Cargando…</div>}><CollectionsList /></Suspense>} />
           
           {/* Payments */}
-          <Route path="payments/new" element={<Suspense fallback={<div className="loading"><div className="spinner" /> Cargando…</div>}><PaymentForm /></Suspense>} />
-          
-          {/* Legacy routes for backward compatibility */}
-          <Route path="apartados" element={<Navigate to="/apartados/new" replace />} />
-          <Route path="credit-sales" element={<Navigate to="/credit-sales/new" replace />} />
-          <Route path="venta" element={<Navigate to="/venta/new" replace />} />
-          <Route path="payments" element={<Navigate to="/payments/new" replace />} />
+          <Route path="payments" element={<Suspense fallback={<div className="loading"><div className="spinner" /> Cargando…</div>}><PaymentForm /></Suspense>} />
           
           <Route path="*" element={<Navigate to="/inventory" replace />} />
         </Route>
