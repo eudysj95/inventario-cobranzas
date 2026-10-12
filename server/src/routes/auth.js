@@ -1,16 +1,33 @@
 import bcrypt from 'bcryptjs';
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import {
   COOKIE_NAME,
+  CSRF_COOKIE_NAME,
   cookieOptions,
+  csrfCookieOptions,
   requireAuth,
   signToken,
+  generateCsrfToken,
 } from '../auth.js';
 
 // Generic login failure — identical body for wrong password, unknown
 // username, or malformed input so the endpoint never reveals whether a
 // username exists (spec: "login fails with a generic error and no session").
 export const GENERIC_LOGIN_ERROR = 'Invalid username or password';
+
+// Rate limiter for login: 5 attempts per 15 minutes per IP
+// Disabled in test environment (NODE_ENV=test)
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,
+  message: { error: 'Demasiados intentos. Intente de nuevo en 15 minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: false,
+  skipFailedRequests: false,
+  skip: (req) => process.env.NODE_ENV === 'test',
+});
 
 // Mock admin for development when database is unreachable
 const MOCK_ADMIN = {
@@ -34,7 +51,7 @@ export default function authRouter(pool) {
   // Check if we should use mock auth (database unreachable)
   const useMock = process.env.USE_MOCK_DASHBOARD === 'true' || !pool;
 
-  router.post('/login', async (req, res) => {
+  router.post('/login', loginLimiter, async (req, res) => {
     const { username, password } = req.body ?? {};
     if (
       typeof username !== 'string' ||
@@ -48,7 +65,9 @@ export default function authRouter(pool) {
     if (useMock) {
       // Mock authentication for development
       if (username === 'admin' && password === 'inventario2026') {
+        const csrfToken = generateCsrfToken();
         res.cookie(COOKIE_NAME, signToken(MOCK_ADMIN), cookieOptions());
+        res.cookie(CSRF_COOKIE_NAME, csrfToken, csrfCookieOptions());
         return res.status(200).json({ user: { id: MOCK_ADMIN.id, username: MOCK_ADMIN.username } });
       }
       return res.status(401).json({ error: GENERIC_LOGIN_ERROR });
@@ -75,7 +94,9 @@ export default function authRouter(pool) {
       return res.status(401).json({ error: GENERIC_LOGIN_ERROR });
     }
 
+    const csrfToken = generateCsrfToken();
     res.cookie(COOKIE_NAME, signToken(admin), cookieOptions());
+    res.cookie(CSRF_COOKIE_NAME, csrfToken, csrfCookieOptions());
     return res
       .status(200)
       .json({ user: { id: admin.id, username: admin.username } });
@@ -83,6 +104,7 @@ export default function authRouter(pool) {
 
   router.post('/logout', (_req, res) => {
     res.clearCookie(COOKIE_NAME, cookieOptions({ forClearing: true }));
+    res.clearCookie(CSRF_COOKIE_NAME, csrfCookieOptions({ forClearing: true }));
     return res.status(200).json({ ok: true });
   });
 

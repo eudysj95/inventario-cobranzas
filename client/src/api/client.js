@@ -10,6 +10,10 @@
 // last line of defense for 400/409 guard messages such as "Cannot delete a
 // product with stock remaining") and the HTTP status is attached so callers
 // can branch when needed. Non-JSON failures degrade to a generic message.
+//
+// CSRF protection: for mutating requests (POST, PATCH, DELETE), the client
+// reads the csrf_token cookie (set by login) and sends it in the
+// X-CSRF-Token header (double-submit cookie pattern).
 
 export class ApiError extends Error {
   constructor(message, { status } = {}) {
@@ -26,10 +30,26 @@ export class ApiError extends Error {
  * @returns {Promise<object|null>} parsed JSON body, or null on 204
  * @throws {ApiError} on any non-2xx response
  */
+function getCsrfToken() {
+  const match = document.cookie.match(/(?:^|; )csrf_token=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 export async function apiRequest(path, { method = 'GET', body, signal } = {}) {
+  const headers = body !== undefined ? { 'Content-Type': 'application/json' } : {};
+  
+  // Add CSRF token for mutating requests
+  const mutatingMethods = ['POST', 'PATCH', 'DELETE', 'PUT'];
+  if (mutatingMethods.includes(method.toUpperCase())) {
+    const csrfToken = getCsrfToken();
+    if (csrfToken) {
+      headers['X-CSRF-Token'] = csrfToken;
+    }
+  }
+  
   const res = await fetch(path, {
     method,
-    headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+    headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
     signal,
   });

@@ -2,6 +2,8 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
+import helmet from 'helmet';
+import { csrfProtection } from './auth.js';
 import healthRouter from './routes/health.js';
 import authRouter from './routes/auth.js';
 import configRouter from './routes/config.js';
@@ -32,6 +34,19 @@ const ASSET_EXT_RE = /\.(?:js|mjs|css|map|png|jpe?g|svg|gif|ico|webp|woff2?|ttf|
 export function createApp({ pool } = {}) {
   const app = express();
   app.disable('x-powered-by');
+  
+  // Security headers
+  app.use(helmet({
+    contentSecurityPolicy: false, // SPA handles its own CSP if needed
+    crossOriginEmbedderPolicy: false,
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
+  }));
+  
   app.use(express.json());
 
   // Keep-alive probe, no auth.
@@ -46,22 +61,22 @@ export function createApp({ pool } = {}) {
   app.use('/api/config', configRouter());
 
   // Core catalog routes (auth-guarded inside the routers).
-  app.use('/api/products', productsRouter(pool));
-  app.use('/api/customers', customersRouter(pool));
+  app.use('/api/products', csrfProtection, productsRouter(pool));
+  app.use('/api/customers', csrfProtection, customersRouter(pool));
 
   // Sales & payments routes (auth-guarded inside the routers).
-  app.use('/api/apartados', apartadosRouter(pool));
-  app.use('/api/credit-sales', creditSalesRouter(pool));
-app.use('/api/cash-sales', cashSalesRouter(pool));
-  app.use('/api/payments', paymentsRouter(pool));
-  app.use('/api/collections', collectionsRouter(pool));
+  app.use('/api/apartados', csrfProtection, apartadosRouter(pool));
+  app.use('/api/credit-sales', csrfProtection, creditSalesRouter(pool));
+app.use('/api/cash-sales', csrfProtection, cashSalesRouter(pool));
+  app.use('/api/payments', csrfProtection, paymentsRouter(pool));
+  app.use('/api/collections', csrfProtection, collectionsRouter(pool));
 
   // Supplier debt registry routes (auth-guarded inside the routers).
-  app.use('/api/suppliers', suppliersRouter(pool));
-  app.use('/api/supplier-debts', supplierDebtsRouter(pool));
+  app.use('/api/suppliers', csrfProtection, suppliersRouter(pool));
+  app.use('/api/supplier-debts', csrfProtection, supplierDebtsRouter(pool));
 
   // Dashboard routes (auth-guarded inside the router).
-  app.use('/api/dashboard', dashboardRouter(pool));
+  app.use('/api/dashboard', csrfProtection, dashboardRouter(pool));
 
   // JSON 404 for unknown API routes (keeps the SPA fallback for / untouched).
   app.use('/api', (_req, res) => {

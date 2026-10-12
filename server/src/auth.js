@@ -1,13 +1,70 @@
 import jwt from 'jsonwebtoken';
+import crypto from 'node:crypto';
 
 // Session cookie name. Single shared admin, stateless JWT in an httpOnly
 // cookie (design decision: JWT over server-side sessions — no revocation,
 // acceptable for a single shared admin).
 export const COOKIE_NAME = 'token';
+export const CSRF_COOKIE_NAME = 'csrf_token';
 
 // 12h session lifetime per design.
 export const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const SESSION_TTL = '12h';
+
+// CSRF token lifetime (24h)
+export const CSRF_TTL_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Generate a secure CSRF token.
+ */
+export function generateCsrfToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+/**
+ * Validate CSRF token from header against cookie.
+ */
+export function validateCsrfToken(req) {
+  const cookieToken = parseCookies(req.headers.cookie)[CSRF_COOKIE_NAME];
+  const headerToken = req.headers['x-csrf-token'] || req.headers['x-xsrf-token'];
+  
+  if (!cookieToken || !headerToken) {
+    return false;
+  }
+  
+  // Timing-safe comparison
+  try {
+    return crypto.timingSafeEqual(
+      Buffer.from(cookieToken),
+      Buffer.from(headerToken)
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * CSRF protection middleware for mutating requests.
+ * Skips validation for safe methods (GET, HEAD, OPTIONS).
+ * Disabled in test environment (NODE_ENV=test).
+ */
+export function csrfProtection(req, res, next) {
+  // Skip CSRF in test environment
+  if (process.env.NODE_ENV === 'test') {
+    return next();
+  }
+  
+  const safeMethods = ['GET', 'HEAD', 'OPTIONS'];
+  if (safeMethods.includes(req.method)) {
+    return next();
+  }
+  
+  if (!validateCsrfToken(req)) {
+    return res.status(403).json({ error: 'CSRF token inválido o ausente' });
+  }
+  
+  return next();
+}
 
 // Documented insecure fallback for local development only. Production fails
 // fast at boot when JWT_SECRET is missing (see getJwtSecret).
@@ -114,5 +171,20 @@ export function cookieOptions({ forClearing = false } = {}) {
     path: '/',
   };
   if (!forClearing) options.maxAge = SESSION_TTL_MS;
+  return options;
+}
+
+/**
+ * Cookie attributes for the CSRF token cookie.
+ * NOT httpOnly so JavaScript can read it for the double-submit pattern.
+ */
+export function csrfCookieOptions({ forClearing = false } = {}) {
+  const options = {
+    httpOnly: false, // JS must read this for X-CSRF-Token header
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+  };
+  if (!forClearing) options.maxAge = CSRF_TTL_MS;
   return options;
 }
