@@ -361,7 +361,60 @@ small { font-size: var(--text-sm); color: var(--color-text-secondary); }
 /* Main content */
 .app-main { flex: 1; padding: var(--space-4) 0; }
 
-/* ===== LOGIN PAGE ===== */
+/* ===== POPVER / DROPDOWN MENU ===== */
+.popover {
+  position: absolute;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-1);
+  min-width: 160px;
+  z-index: var(--z-dropdown);
+  animation: popoverIn var(--transition-fast) ease;
+}
+@keyframes popoverIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.popover[role="menu"] {
+  padding: var(--space-1);
+}
+
+.popover hr {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: var(--space-1) 0;
+}
+
+.popover button[role="menuitem"] {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--transition-fast);
+}
+.popover button[role="menuitem"]:hover:not(:disabled) {
+  background: var(--color-surface-hover);
+}
+.popover button[role="menuitem"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.popover button[role="menuitem"]:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
 .login-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: var(--space-4); background: var(--color-bg); }
 .login-main { width: 100%; max-width: 24rem; }
 .login-card { padding: var(--space-6); }
