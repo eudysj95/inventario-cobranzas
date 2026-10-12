@@ -8,6 +8,7 @@ import { Input } from "../../components/ui/Input";
 import { Spinner } from "../../components/ui/Spinner";
 import { Card } from "../../components/ui/Card";
 import { FormLayout, FormLayoutProps } from "../../components/forms";
+import { Dropdown } from "../../components/ui/Dropdown/Dropdown";
 
 const PRODUCT_STATES = [
   ["", "Todos los estados"],
@@ -55,6 +56,18 @@ function ProductRow({
     { state: "sold", count: 0, label: "Vendido", key: "Vend" },
   ].filter((c) => c.count > 0);
 
+  // Venta dropdown items
+  const ventaItems = [
+    { label: "Venta de contado", value: "cash", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 5h20"/><path d="M2 12h20"/><path d="M2 19h20"/></svg> },
+    { label: "Venta a crédito", value: "credit", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg> },
+    { label: "Apartado", value: "apartado", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12V7H5V7"/><path d="M3 5v14"/><path d="M21 12v7"/><path d="M7 12h10"/><path d="M12 7v10"/></svg> },
+  ];
+
+  function handleVentaSelect(item: { label: string; value: string }) {
+    const baseUrl = item.value === "cash" ? "/venta/new" : item.value === "credit" ? "/credit-sales/new" : "/apartados/new";
+    window.location.href = `${baseUrl}?productId=${product.id}`;
+  }
+
   return (
     <tr>
       <td style={{ fontWeight: "var(--font-weight-medium)" }}>{product.name}</td>
@@ -79,6 +92,16 @@ function ProductRow({
       <td style={{ whiteSpace: "nowrap" }}>{formatDate(new Date(product.updated_at), config)}</td>
       <td>
         <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
+          <Dropdown
+            trigger={
+              <Button variant="primary" size="sm" aria-label={`Vender ${product.name}`}>
+                Venta
+              </Button>
+            }
+            items={ventaItems}
+            onSelect={handleVentaSelect}
+            position="bottom"
+          />
           <Button variant="secondary" size="sm" onClick={() => onEdit(product)} aria-label={`Editar ${product.name}`}>
             Editar
           </Button>
