@@ -7,6 +7,7 @@
 // Nexo design system: combobox, overlay, buttons via utilities.
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useCustomers, createCustomer } from '../../api/customers.js';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -205,7 +206,7 @@ export default function CustomerSelect({
         <button
           type="button"
           onClick={() => setOverlayOpen(true)}
-          disabled={isPending || isCreating}
+          disabled={isCreating}
           className="btn btn-secondary"
           style={{ minHeight: 'var(--touch-target)' }}
         >
@@ -213,7 +214,7 @@ export default function CustomerSelect({
         </button>
       )}
 
-      {overlayOpen && (
+      {overlayOpen && createPortal(
         <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Nuevo cliente">
           <form className="modal" onSubmit={(e) => { e.preventDefault(); handleSaveNewCustomer(); }}>
             <div className="modal-header">
@@ -233,7 +234,7 @@ export default function CustomerSelect({
             </div>
 
             <div className="modal-body">
-              <label htmlFor="customer-select-name" className="label">
+              <label className="label">
                 Nombre
                 <input
                   id="customer-select-name"
@@ -247,7 +248,7 @@ export default function CustomerSelect({
                 />
               </label>
 
-              <label htmlFor="customer-select-phone" className="label">
+              <label className="label">
                 Teléfono (opcional)
                 <input
                   id="customer-select-phone"
@@ -282,7 +283,8 @@ export default function CustomerSelect({
               </button>
             </div>
           </form>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
