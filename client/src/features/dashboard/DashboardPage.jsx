@@ -173,7 +173,7 @@ function DashboardError({ onRetry }) {
               const salesByDay = {};
               recentSales.forEach((sale) => {
                 const day = new Date(sale.created_at).toLocaleDateString(config.currencyLocale, { weekday: 'short' });
-                salesByDay[day] = (salesByDay[day] || 0) + sale.amount;
+                salesByDay[day] = (salesByDay[day] || 0) + (sale.total ?? 0);
               });
               const dailyData = Object.entries(salesByDay).map(([day, income]) => ({ day, income }));
               
