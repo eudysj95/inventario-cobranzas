@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useConfig } from "../../api/config";
 import { useProducts, useProductMutations } from "../../api/products";
 import { formatCurrency, formatDate } from "../../lib/format";
@@ -42,11 +42,13 @@ function ProductRow({
   onEdit,
   onDelete,
   config,
+  navigate,
 }: {
   product: Product;
   onEdit: (product: Product) => void;
   onDelete: (product: Product) => void;
   config: { currencySymbol: string; currencyLocale: string };
+  navigate: (path: string) => void;
 }) {
   // Build state chips similar to the old ProductRow
   const stateCounts = [
@@ -64,8 +66,9 @@ function ProductRow({
   ];
 
   function handleVentaSelect(item: { label: string; value: string }) {
-    const baseUrl = item.value === "cash" ? "/venta/new" : item.value === "credit" ? "/credit-sales/new" : "/apartados/new";
-    window.location.href = `${baseUrl}?productId=${product.id}`;
+    const baseUrl = item.value === "cash" ? "/venta" : item.value === "credit" ? "/credit-sales" : "/apartados";
+    const url = `${baseUrl}?productId=${product.id}&new=true`;
+    navigate(url);
   }
 
   return (
@@ -118,6 +121,7 @@ export default function InventoryList() {
   const { data: configData } = useConfig();
   const config = configData ?? { currencySymbol: "$", currencyLocale: "es-AR" };
   const { create, update, remove } = useProductMutations();
+  const navigate = useNavigate();
 
   const [searchInput, setSearchInput] = useState("");
   const [filters, setFilters] = useState({ search: "", state: "" });
@@ -265,7 +269,7 @@ export default function InventoryList() {
               </thead>
               <tbody>
                 {products.map((product) => (
-                  <ProductRow key={product.id} product={product} onEdit={openEdit} onDelete={handleDelete} config={config} />
+                  <ProductRow key={product.id} product={product} onEdit={openEdit} onDelete={handleDelete} config={config} navigate={navigate} />
                 ))}
               </tbody>
             </table>

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useConfig } from "../../api/config";
-import { useCustomers } from "../../api/customers";
 import { useProducts } from "../../api/products";
 import { buildCreditSaleBody } from "../../api/credit-sales";
 import { formatCurrency } from "../../lib/format";
@@ -10,6 +9,7 @@ import { Input } from "../../components/ui/Input";
 import { Card } from "../../components/ui/Card";
 import { Spinner } from "../../components/ui/Spinner";
 import { Field } from "../../components/forms";
+import CustomerSelect from "../../features/customer/CustomerSelect";
 
 const EMPTY_LINE = { productId: "", units: "", price: undefined };
 
@@ -28,12 +28,13 @@ function validate(values: { customerId: string; lines: any[]; dueDate: string })
   return null;
 }
 
-export default function CreditSaleForm({ onSubmit, onCancel }: { onSubmit: (data: any) => Promise<void>; onCancel: () => void }) {
-  const { data: customers = [] } = useCustomers("");
+export default function CreditSaleForm({ onSubmit, onCancel, prefillProductId }: { onSubmit: (data: any) => Promise<void>; onCancel: () => void; prefillProductId?: string | null }) {
+  const { data: configData } = useConfig();
+  const config = configData ?? { currencySymbol: "$", currencyLocale: "es-AR" };
   const { data: products = [] } = useProducts({});
   const navigate = useNavigate();
   const [customerId, setCustomerId] = useState("");
-  const [lines, setLines] = useState([{ ...EMPTY_LINE }]);
+  const [lines, setLines] = useState([{ ...EMPTY_LINE, productId: prefillProductId || "" }]);
   const [dueDate, setDueDate] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -65,12 +66,7 @@ export default function CreditSaleForm({ onSubmit, onCancel }: { onSubmit: (data
       <Card>
         <form onSubmit={handleSubmit} noValidate>
           <div className="card-body">
-            <Field label="Cliente" required>
-              <select value={customerId} onChange={(e) => setCustomerId(e.target.value)} disabled={submitting} className="input select" required>
-                <option value="">Seleccionar cliente…</option>
-                {customers.map((c: any) => <option key={c.id} value={c.id}>{c.name} — saldo {formatCurrency(c.open_balance)}</option>)}
-              </select>
-            </Field>
+            <CustomerSelect initialCustomerId={customerId} onSelect={setCustomerId} allowCreate={true} />
             <div style={{ marginTop: "var(--space-4)" }}>
               <h3 className="mb-3" style={{ fontSize: "var(--text-lg)" }}>Líneas</h3>
               {lines.map((line, index) => (

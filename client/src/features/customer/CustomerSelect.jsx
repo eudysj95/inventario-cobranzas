@@ -215,8 +215,8 @@ export default function CustomerSelect({
       )}
 
       {overlayOpen && createPortal(
-        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Nuevo cliente">
-          <form className="modal" onSubmit={(e) => { e.preventDefault(); handleSaveNewCustomer(); }}>
+        <div className="modal-backdrop" role="presentation" onClick={(e) => { if (e.target === e.currentTarget) setOverlayOpen(false); }}>
+          <form className="modal" role="dialog" aria-modal="true" aria-label="Nuevo cliente" onSubmit={(e) => { e.preventDefault(); handleSaveNewCustomer(); }}>
             <div className="modal-header">
               <h3 className="modal-title">Nuevo cliente</h3>
               <button

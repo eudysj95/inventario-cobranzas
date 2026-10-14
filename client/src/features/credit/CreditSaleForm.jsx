@@ -31,10 +31,10 @@ function validate(values) {
   return null;
 }
 
-export default function CreditSaleForm({ onSubmit, onCancel }) {
+export default function CreditSaleForm({ onSubmit, onCancel, prefillProductId }) {
   const { data: products = [] } = useProducts({});
   const [customerId, setCustomerId] = useState('');
-  const [lines, setLines] = useState([{ ...EMPTY_LINE }]);
+  const [lines, setLines] = useState([{ ...EMPTY_LINE, productId: prefillProductId || '' }]);
   const [dueDate, setDueDate] = useState('');
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);

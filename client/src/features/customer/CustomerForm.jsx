@@ -94,7 +94,7 @@ export default function CustomerForm({ onSubmit, onCancel, isEditing, initialCus
             </p>
           )}
 
-          <label htmlFor="customer-name" className="label">
+          <label className="label">
             Nombre
             <input
               id="customer-name"
@@ -108,7 +108,7 @@ export default function CustomerForm({ onSubmit, onCancel, isEditing, initialCus
             />
           </label>
 
-          <label htmlFor="customer-phone" className="label">
+          <label className="label">
             Teléfono (opcional)
             <div className="input-group">
               <input

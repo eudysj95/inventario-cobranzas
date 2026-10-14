@@ -58,7 +58,7 @@ describe('SidebarDrawer', () => {
     );
 
     expect(screen.getByTestId('drawer-backdrop')).toBeInTheDocument();
-    expect(screen.getByTestId('drawer-backdrop')).toHaveClass('modal-backdrop');
+    expect(screen.getByTestId('drawer-backdrop')).toHaveClass('drawer-backdrop');
   });
 
   it('closes on backdrop click', () => {

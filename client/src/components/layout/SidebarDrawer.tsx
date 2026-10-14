@@ -174,7 +174,7 @@ export default function SidebarDrawer({
 
   return (
     <div
-      className="modal-backdrop"
+      className="drawer-backdrop"
       data-testid="drawer-backdrop"
       onClick={handleBackdropClick}
       role="presentation"

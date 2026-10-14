@@ -5,11 +5,12 @@
 // neutral Spanish.
 // Nexo design system: header, modal, card, table via utilities.
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { DEFAULT_CONFIG, useConfig } from '../../api/config.js';
 import { useCreditSaleMutations, useSaleDetail } from '../../api/credit-sales.js';
 import { formatCurrency, formatDate } from '../../lib/format.js';
-import CreditSaleForm from './CreditSaleForm.jsx';
+import CreditSaleForm from './CreditSaleFormNew.tsx';
 
 export default function CreditSalesPage() {
   const { data: configData } = useConfig();
@@ -18,6 +19,18 @@ export default function CreditSalesPage() {
   const [createdSaleId, setCreatedSaleId] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  const [prefillProductId, setPrefillProductId] = useState(null);
+  const [searchParams] = useSearchParams();
+
+  // Check for productId in query params to prefill form (run once on mount)
+  useEffect(() => {
+    const productId = searchParams.get('productId');
+    const newParam = searchParams.get('new');
+    if ((productId || newParam === 'true') && !prefillProductId && !formOpen) {
+      setPrefillProductId(productId);
+      setFormOpen(true);
+    }
+  }, [searchParams, prefillProductId, formOpen]);
 
   async function handleCreate(body) {
     setSubmitError(null);
@@ -75,7 +88,7 @@ export default function CreditSalesPage() {
           )}
 
           {formOpen && (
-            <CreditSaleForm onSubmit={handleCreate} onCancel={() => setFormOpen(false)} />
+            <CreditSaleForm onSubmit={handleCreate} onCancel={() => { setFormOpen(false); setPrefillProductId(null); }} prefillProductId={prefillProductId} />
           )}
 
           {!formOpen && <p className="empty-state">Seleccione «Nueva venta a crédito» para registrar una venta.</p>}

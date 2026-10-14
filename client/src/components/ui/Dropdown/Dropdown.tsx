@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, type ReactElement } from "react";
+import React, { useState, useRef, useEffect, useLayoutEffect, type ReactElement } from "react";
 import { createPortal } from "react-dom";
 
 /**
@@ -61,9 +61,44 @@ export function Dropdown({ trigger, items, onSelect, position = "bottom" }: Drop
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLElement>(null);
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
 
   const toggle = () => setIsOpen((prev) => !prev);
   const close = () => setIsOpen(false);
+
+  // Position the dropdown relative to trigger when portaled to body
+  useLayoutEffect(() => {
+    if (!isOpen || !triggerRef.current || !dropdownRef.current) return;
+
+    const triggerRect = triggerRef.current.getBoundingClientRect();
+    const dropdownRect = dropdownRef.current.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    let top = position === "top" ? triggerRect.top - dropdownRect.height - 8 : triggerRect.bottom + 8;
+    let left = triggerRect.left;
+
+    // Horizontal viewport containment
+    if (left + dropdownRect.width > viewportWidth - 16) {
+      left = viewportWidth - dropdownRect.width - 16;
+    }
+    if (left < 16) left = 16;
+
+    // Vertical viewport containment (flip if needed)
+    if (position === "bottom" && top + dropdownRect.height > viewportHeight - 16) {
+      top = triggerRect.top - dropdownRect.height - 8;
+    } else if (position === "top" && top < 16) {
+      top = triggerRect.bottom + 8;
+    }
+
+    setMenuStyle({
+      position: "fixed",
+      top: `${top}px`,
+      left: `${left}px`,
+      minWidth: `${Math.max(triggerRect.width, 160)}px`,
+      zIndex: "var(--z-dropdown)",
+    });
+  }, [isOpen, position]);
 
   // Handle outside click
   useEffect(() => {
@@ -94,6 +129,23 @@ export function Dropdown({ trigger, items, onSelect, position = "bottom" }: Drop
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen]);
 
+  // Handle window resize/scroll to reposition
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleResize = () => {
+      if (triggerRef.current && dropdownRef.current) {
+        // Re-trigger positioning by toggling a dummy state
+        setMenuStyle((prev) => ({ ...prev }));
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("scroll", handleResize, true);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("scroll", handleResize, true);
+    };
+  }, [isOpen]);
+
   const enhancedTrigger = React.cloneElement(trigger, {
     ref: triggerRef,
     onClick: (e: React.MouseEvent) => {
@@ -109,8 +161,8 @@ export function Dropdown({ trigger, items, onSelect, position = "bottom" }: Drop
     <div
       ref={dropdownRef}
       role="menu"
-      className={`popover absolute ${position === "top" ? "bottom-full mb-2" : "top-full mt-2"} left-0 min-w-[160px] z-[var(--z-dropdown)]`}
-      style={{ minWidth: triggerRef.current?.offsetWidth ? `${triggerRef.current.offsetWidth}px` : "160px" }}
+      className="popover"
+      style={menuStyle}
     >
       <div className="bg-surface border border-border rounded-lg shadow-lg py-1">
         {items.map((item, index) => {
@@ -125,7 +177,7 @@ export function Dropdown({ trigger, items, onSelect, position = "bottom" }: Drop
               className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 ${
                 item.disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-surface-hover"
               }`}
-              onClick={() => {
+              onClick={(e) => {
                 if (!item.disabled) {
                   onSelect?.(item);
                   close();

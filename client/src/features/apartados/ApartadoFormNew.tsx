@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useConfig } from "../../api/config";
-import { useCustomers } from "../../api/customers";
 import { useProducts } from "../../api/products";
 import { buildApartadoBody } from "../../api/apartados";
 import { formatCurrency } from "../../lib/format";
@@ -10,6 +9,7 @@ import { Input } from "../../components/ui/Input";
 import { Card } from "../../components/ui/Card";
 import { Spinner } from "../../components/ui/Spinner";
 import { Field } from "../../components/forms";
+import CustomerSelect from "../../features/customer/CustomerSelect";
 
 function validate(values: { customerId: string; productId: string; units: string; agreedPrice: string; dueDate: string }) {
   if (!values.customerId) return "Debe seleccionar un cliente.";
@@ -20,17 +20,30 @@ function validate(values: { customerId: string; productId: string; units: string
   return null;
 }
 
-export default function ApartadoForm({ onSubmit, onCancel }: { onSubmit: (data: any) => Promise<void>; onCancel: () => void }) {
-  const { data: customers = [] } = useCustomers("");
+export default function ApartadoForm({ onSubmit, onCancel, prefillProductId }: { onSubmit: (data: any) => Promise<void>; onCancel: () => void; prefillProductId?: string | null }) {
+  const { data: configData } = useConfig();
+  const config = configData ?? { currencySymbol: "$", currencyLocale: "es-AR" };
   const { data: products = [] } = useProducts({});
   const navigate = useNavigate();
   const [customerId, setCustomerId] = useState("");
-  const [productId, setProductId] = useState("");
+  const [productId, setProductId] = useState(prefillProductId || "");
   const [units, setUnits] = useState("");
   const [agreedPrice, setAgreedPrice] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Auto-fill agreedPrice with product's catalog price when product changes
+  useEffect(() => {
+    if (productId) {
+      const product = products.find(p => p.id === productId);
+      if (product?.price) {
+        setAgreedPrice(String(product.price));
+      }
+    } else {
+      setAgreedPrice("");
+    }
+  }, [productId, products]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -53,12 +66,7 @@ export default function ApartadoForm({ onSubmit, onCancel }: { onSubmit: (data: 
       <Card>
         <form onSubmit={handleSubmit} noValidate>
           <div className="card-body">
-            <Field label="Cliente" required>
-              <select value={customerId} onChange={(e) => setCustomerId(e.target.value)} disabled={submitting} className="input select" required>
-                <option value="">Seleccionar cliente…</option>
-                {customers.map((c: any) => <option key={c.id} value={c.id}>{c.name} — saldo {formatCurrency(c.open_balance)}</option>)}
-              </select>
-            </Field>
+            <CustomerSelect initialCustomerId={customerId} onSelect={setCustomerId} allowCreate={true} />
             <Field label="Producto" required>
               <select value={productId} onChange={(e) => setProductId(e.target.value)} disabled={submitting} className="input select" required>
                 <option value="">Seleccionar…</option>

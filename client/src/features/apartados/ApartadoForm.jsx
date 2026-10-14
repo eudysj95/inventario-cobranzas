@@ -25,11 +25,11 @@ function validate(values) {
   return null;
 }
 
-export default function ApartadoForm({ onSubmit, onCancel }) {
+export default function ApartadoForm({ onSubmit, onCancel, prefillProductId }) {
   const { data: products = [] } = useProducts({});
 
   const [customerId, setCustomerId] = useState('');
-  const [productId, setProductId] = useState('');
+  const [productId, setProductId] = useState(prefillProductId || '');
   const [units, setUnits] = useState('');
   const [agreedPrice, setAgreedPrice] = useState('');
   const [dueDate, setDueDate] = useState('');

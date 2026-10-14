@@ -1,7 +1,7 @@
 /* SidebarDrawer — Mobile overlay navigation drawer
    Slide-in from left, backdrop overlay, focus trap */
 
-.modal-backdrop {
+.drawer-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.4);
@@ -249,14 +249,14 @@
 
 /* ===== RESPONSIVE ===== */
 @media (min-width: 768px) {
-  .modal-backdrop {
+  .drawer-backdrop {
     display: none;
   }
 }
 
 /* ===== REDUCED MOTION ===== */
 @media (prefers-reduced-motion: reduce) {
-  .modal-backdrop,
+  .drawer-backdrop,
   .drawer {
     animation: none;
   }

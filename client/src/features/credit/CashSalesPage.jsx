@@ -4,12 +4,12 @@
 // the "sale detail read"). Also shows a history list of all cash sales.
 // Nexo design system: header, modal, table via utilities.
 
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DEFAULT_CONFIG, useConfig } from '../../api/config.js';
 import { useCashSaleMutations, useCashSaleDetail, useCashSalesList } from '../../api/cash-sales.js';
 import { formatCurrency, formatDate } from '../../lib/format.js';
-import CashSaleForm from './CashSaleForm.jsx';
+import CashSaleForm from './CashSaleFormNew.tsx';
 import CashSaleDetail from './CashSaleDetail.jsx';
 
 export default function CashSalesPage() {
@@ -22,7 +22,20 @@ export default function CashSalesPage() {
   const [submitError, setSubmitError] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
   const [view, setView] = useState('list'); // 'list' | 'new' | 'detail'
+  const [prefillProductId, setPrefillProductId] = useState(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Check for productId in query params to prefill form (run once on mount)
+  useEffect(() => {
+    const productId = searchParams.get('productId');
+    const newParam = searchParams.get('new');
+    if ((productId || newParam === 'true') && !prefillProductId && view === 'list') {
+      setPrefillProductId(productId);
+      setFormOpen(true);
+      setView('new');
+    }
+  }, [searchParams, prefillProductId, view]);
 
   async function handleCreate({ customerId, lines }) {
     setSubmitError(null);
@@ -100,7 +113,7 @@ export default function CashSalesPage() {
               {submitError}
             </p>
           )}
-          <CashSaleForm onSubmit={handleCreate} onCancel={() => { setFormOpen(false); setView('list'); }} />
+          <CashSaleForm onSubmit={handleCreate} onCancel={() => { setFormOpen(false); setView('list'); setPrefillProductId(null); }} prefillProductId={prefillProductId} />
         </>
       ) : (
         <>

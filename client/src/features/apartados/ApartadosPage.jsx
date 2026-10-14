@@ -6,14 +6,15 @@
 // banner/form. UI copy in neutral Spanish.
 // Nexo design system: header, filters, table, modal via utilities.
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { DEFAULT_CONFIG, useConfig } from '../../api/config.js';
 import {
   buildApartadoPayBody,
   useApartadoMutations,
   useApartados,
 } from '../../api/apartados.js';
-import ApartadoForm from './ApartadoForm.jsx';
+import ApartadoForm from './ApartadoFormNew.tsx';
 import ApartadoList from './ApartadoList.jsx';
 
 const STATUS_FILTERS = [
@@ -33,6 +34,18 @@ export default function ApartadosPage() {
   const [payingId, setPayingId] = useState(null);
   const [bannerError, setBannerError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [prefillProductId, setPrefillProductId] = useState(null);
+  const [searchParams] = useSearchParams();
+
+  // Check for productId in query params to prefill form (run once on mount)
+  useEffect(() => {
+    const productId = searchParams.get('productId');
+    const newParam = searchParams.get('new');
+    if ((productId || newParam === 'true') && !prefillProductId && !formOpen) {
+      setPrefillProductId(productId);
+      setFormOpen(true);
+    }
+  }, [searchParams, prefillProductId, formOpen]);
 
   const { data: apartados = [], isPending, isError } = useApartados({ status });
 
@@ -134,7 +147,8 @@ export default function ApartadosPage() {
       {formOpen && (
         <ApartadoForm
           onSubmit={handleCreate}
-          onCancel={() => setFormOpen(false)}
+          onCancel={() => { setFormOpen(false); setPrefillProductId(null); }}
+          prefillProductId={prefillProductId}
         />
       )}
     </section>

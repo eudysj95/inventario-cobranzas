@@ -1,0 +1,5 @@
+root=I(null, {"type":"frame","name":"App Layout","width":1440,"height":900,"layout":"horizontal","gap":0,"fill":{"type":"solid","color":"$--background"}})
+sidebar=I(root, {"type":"frame","name":"Sidebar","width":280,"height":"fill_container","layout":"vertical","gap":0,"padding":0,"fill":{"type":"solid","color":"$--card"},"role":"navigation"})
+main=I(root, {"type":"frame","name":"Main Area","width":"fill_container","height":"fill_container","layout":"vertical","gap":0,"fill":{"type":"solid","color":"$--background"}})
+header=I(main, {"type":"frame","name":"Header","width":"fill_container","height":64,"layout":"horizontal","gap":16,"padding":"0 24","fill":{"type":"solid","color":"$--card"},"role":"banner"})
+content=I(main, {"type":"frame","name":"Content","width":"fill_container","height":"fill_container","layout":"vertical","gap":24,"padding":24,"fill":{"type":"solid","color":"$--background"}})
