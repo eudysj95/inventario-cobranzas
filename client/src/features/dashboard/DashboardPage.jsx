@@ -172,7 +172,7 @@ function DashboardError({ onRetry }) {
               // Try to aggregate recentSales by day for a simple daily view
               const salesByDay = {};
               recentSales.forEach((sale) => {
-                const day = new Date(sale.createdAt).toLocaleDateString(config.currencyLocale, { weekday: 'short' });
+                const day = new Date(sale.created_at).toLocaleDateString(config.currencyLocale, { weekday: 'short' });
                 salesByDay[day] = (salesByDay[day] || 0) + sale.amount;
               });
               const dailyData = Object.entries(salesByDay).map(([day, income]) => ({ day, income }));
