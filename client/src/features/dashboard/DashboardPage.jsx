@@ -75,29 +75,18 @@ function DashboardError({ onRetry }) {
 
   // Derived data for mockup KPIs
   const ventasDelDia = stats.sales?.today ?? 0;
-  const cuentasPorCobrar = (stats.collections?.overdueToday ?? 0) + (stats.collections?.dueNext3Days ?? 0) + (stats.customers?.totalBalance ?? 0);
+  const cuentasPorCobrar = (stats.collections?.overdueToday ?? 0) + (stats.collections?.dueNext3Days ?? 0);
   const valorInventario = stats.inventory?.totalValue ?? 0;
 
-  // Mock 7-day income data for chart (API doesn't provide daily breakdown yet)
-  const income7Days = [
-    { day: 'Lun', income: 12000 },
-    { day: 'Mar', income: 18000 },
-    { day: 'Mié', income: 15000 },
-    { day: 'Jue', income: 22000 },
-    { day: 'Vie', income: 25000 },
-    { day: 'Sáb', income: 30000 },
-    { day: 'Dom', income: 28000 },
-  ];
-
-  // Mock recent movements for "Últimos movimientos" list
-  const recentMovements = [
-    { type: 'rendimiento', title: 'Rendimiento', amount: 1275.00, cantidad: 1, precio: 1275.00, currency: 'USD', iconColor: 'green' },
-    { type: 'cobranzas', title: 'Cobranzas', amount: 1685.00, cantidad: 1, precio: 1685.00, currency: 'VES', iconColor: 'blue' },
-    { type: 'venta', title: 'Venta: Producto A', amount: 950.00, cantidad: 30, precio: 1.75, currency: 'VES', iconColor: 'green' },
-    { type: 'abono', title: 'Abono: Cliente B', amount: 300.00, cantidad: 1, precio: 300.00, iconColor: 'blue' },
-    { type: 'gasto', title: 'Gasto: Oficina', amount: 150.00, cantidad: 1, precio: 150.00, currency: 'VES', iconColor: 'red' },
-    { type: 'venta', title: 'Venta: Producto A', amount: 200.00, cantidad: 2, precio: 100.00, iconColor: 'green' },
-  ];
+  // Real recent movements from API (last 5 sales: cash + credit combined)
+  const recentSales = stats.recentSales ?? [];
+  const recentMovements = recentSales.map((sale) => ({
+    type: sale.type === 'cash' ? 'venta' : 'abono',
+    title: sale.type === 'cash' ? `Venta: ${sale.customer_name}` : `Abono: ${sale.customer_name}`,
+    amount: sale.total,
+    date: sale.created_at,
+    iconColor: sale.type === 'cash' ? 'green' : 'blue',
+  }));
 
   return (
     <section
@@ -179,24 +168,41 @@ function DashboardError({ onRetry }) {
             </h2>
           </header>
           <div className="card-body" style={{ padding: 'var(--space-4)', minHeight: '300px' }}>
-            <MicroBarChart
-              data={income7Days}
-              xKey="day"
-              yKey="income"
-              barColors={[
-                'var(--color-success)',      // Lun - verde esmeralda
-                'var(--color-info)',         // Mar - azul secundario
-                'var(--color-primary)',      // Mié - azul marino
-                'var(--color-success)',      // Jue - verde esmeralda
-                'var(--color-info)',         // Vie - azul secundario
-                'var(--color-primary)',      // Sáb - azul marino
-                'var(--color-success)',      // Dom - verde esmeralda
-              ]}
-              height={280}
-              showGrid
-              showAxis
-              yAxisFormatter={(v) => formatCurrency(v, config)}
-            />
+            {(() => {
+              // Try to aggregate recentSales by day for a simple daily view
+              const salesByDay = {};
+              recentSales.forEach((sale) => {
+                const day = new Date(sale.createdAt).toLocaleDateString(config.currencyLocale, { weekday: 'short' });
+                salesByDay[day] = (salesByDay[day] || 0) + sale.amount;
+              });
+              const dailyData = Object.entries(salesByDay).map(([day, income]) => ({ day, income }));
+              
+              if (dailyData.length > 0) {
+                return (
+                  <MicroBarChart
+                    data={dailyData}
+                    xKey="day"
+                    yKey="income"
+                    barColors={dailyData.map((_, i) => ['var(--color-success)', 'var(--color-info)', 'var(--color-primary)'][i % 3])}
+                    height={280}
+                    showGrid
+                    showAxis
+                    yAxisFormatter={(v) => formatCurrency(v, config)}
+                  />
+                );
+              }
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '280px', color: 'var(--color-text-secondary)', textAlign: 'center', gap: 'var(--space-3)' }}>
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.4 }}>
+                    <line x1="18" y1="20" x2="18" y2="10" />
+                    <line x1="12" y1="20" x2="12" y2="4" />
+                    <line x1="6" y1="20" x2="6" y2="14" />
+                  </svg>
+                  <p style={{ margin: 0, fontSize: 'var(--text-sm)' }}>Desglose diario no disponible</p>
+                  <p style={{ margin: 0, fontSize: 'var(--text-xs)' }}>El servidor no provee series temporales diarias aún</p>
+                </div>
+              );
+            })()}
           </div>
         </section>
 
@@ -271,10 +277,7 @@ function DashboardError({ onRetry }) {
                       {mov.title}
                     </p>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)', fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', lineHeight: 1.3 }}>
-                      <span>Cantidad: <strong>{Number(mov.cantidad).toLocaleString(config.currencyLocale)}</strong></span>
-                      {mov.precio !== undefined && mov.precio !== 0 && (
-                        <span>Precio unidad: <strong>{mov.currency ? `${mov.currency} ` : ''}${formatCurrency(mov.precio, config)}</strong></span>
-                      )}
+                      <span>{formatDate(mov.date, config)}</span>
                     </div>
                   </div>
                   <div style={{ textAlign: 'right', minWidth: '80px' }}>
