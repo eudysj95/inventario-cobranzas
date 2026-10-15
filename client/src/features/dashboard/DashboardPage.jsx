@@ -75,7 +75,7 @@ function DashboardError({ onRetry }) {
 
   // Derived data for mockup KPIs
   const ventasDelDia = stats.sales?.today ?? 0;
-  const cuentasPorCobrar = (stats.collections?.overdueToday ?? 0) + (stats.collections?.dueNext3Days ?? 0);
+  const cuentasPorCobrar = stats.collections?.totalOpenBalance ?? 0;
   const valorInventario = stats.inventory?.totalValue ?? 0;
 
   // Real recent movements from API (last 5 sales: cash + credit combined)
@@ -169,38 +169,34 @@ function DashboardError({ onRetry }) {
           </header>
           <div className="card-body" style={{ padding: 'var(--space-4)', minHeight: '300px' }}>
             {(() => {
-              // Try to aggregate recentSales by day for a simple daily view
+              // Build 7-day week (Mon-Sun) with real data, filling 0 for days without sales
+              const now = new Date();
+              const weekStart = new Date(now);
+              weekStart.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1)); // Monday
+              
               const salesByDay = {};
               recentSales.forEach((sale) => {
                 const day = new Date(sale.created_at).toLocaleDateString(config.currencyLocale, { weekday: 'short' });
                 salesByDay[day] = (salesByDay[day] || 0) + (sale.total ?? 0);
               });
-              const dailyData = Object.entries(salesByDay).map(([day, income]) => ({ day, income }));
               
-              if (dailyData.length > 0) {
-                return (
-                  <MicroBarChart
-                    data={dailyData}
-                    xKey="day"
-                    yKey="income"
-                    barColors={dailyData.map((_, i) => ['var(--color-success)', 'var(--color-info)', 'var(--color-primary)'][i % 3])}
-                    height={280}
-                    showGrid
-                    showAxis
-                    yAxisFormatter={(v) => formatCurrency(v, config)}
-                  />
-                );
-              }
+              const weekDays = ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'];
+              const dailyData = weekDays.map(day => ({
+                day,
+                income: salesByDay[day] ?? 0,
+              }));
+              
               return (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '280px', color: 'var(--color-text-secondary)', textAlign: 'center', gap: 'var(--space-3)' }}>
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.4 }}>
-                    <line x1="18" y1="20" x2="18" y2="10" />
-                    <line x1="12" y1="20" x2="12" y2="4" />
-                    <line x1="6" y1="20" x2="6" y2="14" />
-                  </svg>
-                  <p style={{ margin: 0, fontSize: 'var(--text-sm)' }}>Desglose diario no disponible</p>
-                  <p style={{ margin: 0, fontSize: 'var(--text-xs)' }}>El servidor no provee series temporales diarias aún</p>
-                </div>
+                <MicroBarChart
+                  data={dailyData}
+                  xKey="day"
+                  yKey="income"
+                  barColors={dailyData.map((_, i) => ['var(--color-success)', 'var(--color-info)', 'var(--color-primary)'][i % 3])}
+                  height={280}
+                  showGrid
+                  showAxis
+                  yAxisFormatter={(v) => formatCurrency(v, config)}
+                />
               );
             })()}
           </div>

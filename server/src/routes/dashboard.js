@@ -205,6 +205,8 @@ export default function dashboardRouter(pool) {
       // ===== COLLECTIONS (COBRANZAS) =====
       const collectionsResult = await pool.query(`
         SELECT
+          -- Total open balance across ALL customer debts (balance > 0)
+          COALESCE(SUM(CASE WHEN d.balance > 0 THEN d.balance ELSE 0 END), 0) AS total_open_balance,
           -- Overdue today (due_date < today, balance > 0)
           COUNT(DISTINCT CASE WHEN d.due_date < CURRENT_DATE AND d.balance > 0 THEN c.id END) AS overdue_today,
           -- Due next 3 days (due_date between today and +3 days, balance > 0)
@@ -315,6 +317,7 @@ export default function dashboardRouter(pool) {
           reservedUnits: Number(ap.reserved_units || 0),
         },
         collections: {
+          totalOpenBalance: roundMoney(Number(coll.total_open_balance || 0)),
           overdueToday: Number(coll.overdue_today || 0),
           dueNext3Days: Number(coll.due_next_3_days || 0),
           withoutPhone: Number(coll.without_phone || 0),
