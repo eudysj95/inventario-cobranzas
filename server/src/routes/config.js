@@ -14,13 +14,13 @@ import { Router } from 'express';
  * reads process.env only and never queries the database).
  *
  * Env vars (documented in server/.env.example), with sane defaults:
- *   INSTANCE_BUSINESS_NAME    default 'Mi Negocio'
+ *   INSTANCE_BUSINESS_NAME    default 'Nexo'
  *   INSTANCE_CURRENCY_SYMBOL  default '$'
  *   INSTANCE_CURRENCY_LOCALE  default 'es-AR'
  *   INSTANCE_WHATSAPP_NUMBER  optional — the key is omitted when unset
  */
 const DEFAULTS = {
-  businessName: 'Mi Negocio',
+  businessName: 'Nexo',
   currencySymbol: '$',
   currencyLocale: 'es-AR',
 };
