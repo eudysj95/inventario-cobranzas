@@ -106,9 +106,8 @@ const businessName = config?.businessName ?? 'Nexo';
   return (
     <header className="header" data-testid="header" role="banner" style={{ height: 'var(--header-height)' }}>
       <div className="header-inner">
-        {/* Left: Mobile menu button + Sidebar toggle + Logo (mobile centered) + Breadcrumbs */}
+        {/* Left: Mobile menu button */}
         <div className="header-left">
-          {/* Mobile hamburger */}
           {onMenuClick && (
             <button
               type="button"
@@ -121,40 +120,30 @@ const businessName = config?.businessName ?? 'Nexo';
               {ICONS.menu}
             </button>
           )}
-
-          {/* Breadcrumbs */}
-          <nav className="breadcrumbs" data-testid="breadcrumbs" role="navigation" aria-label="Ruta de navegación">
-            <ol className="breadcrumbs-list">
-              {breadcrumbs.map((item, index) => (
-                <li key={item.path} className="breadcrumbs-item">
-                  {index > 0 && <span className="breadcrumbs-separator" aria-hidden="true">/</span>}
-                  {index === breadcrumbs.length - 1 ? (
-                    <span className="breadcrumbs-current" aria-current="page">
-                      {item.label}
-                    </span>
-                  ) : (
-                    <NavLink to={item.path} className="breadcrumbs-link">
-                      {item.label}
-                    </NavLink>
-                  )}
-                </li>
-              ))}
-            </ol>
-          </nav>
         </div>
 
-        {/* Right: Global actions */}
-        <div className="header-right">
-          {/* Notifications */}
-          <button
-            type="button"
-            className="btn btn-ghost header-notifications"
-            aria-label="Notificaciones"
-            disabled
+        {/* Center: Home logo */}
+        <div className="header-center">
+          <NavLink
+            to="/"
+            className="header-home-logo"
+            onClick={(e) => e.stopPropagation()}
+            aria-label="Inicio"
           >
-            {ICONS.bell}
-          </button>
+            <img
+              src={logoUrl}
+              alt={businessName}
+              className="header-logo-img"
+              width="32"
+              height="32"
+              aria-hidden="true"
+            />
+            <span className="header-logo-text">{businessName}</span>
+          </NavLink>
+        </div>
 
+        {/* Right: User menu */}
+        <div className="header-right">
           {/* User menu */}
           {(userName || userRole || onLogout) && (
             <div className="header-user-menu" ref={userMenuRef} data-testid="user-menu">

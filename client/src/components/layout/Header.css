@@ -10,6 +10,7 @@
   border-bottom: 1px solid var(--color-border);
   box-shadow: var(--shadow-xs);
   height: var(--header-height);
+  width: 100%;
   display: flex;
   align-items: center;
 }
@@ -20,11 +21,34 @@
   justify-content: space-between;
   gap: var(--space-4);
   padding: 0 var(--space-4);
-  max-width: var(--container-max);
-  margin: 0 auto;
   width: 100%;
   height: 100%;
   position: relative;
+}
+
+/* Left: hamburger + breadcrumbs */
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+/* Center: Home logo */
+.header-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+/* Right: user menu */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 /* ===== LOGO ===== */
@@ -41,6 +65,34 @@
   font-weight: var(--font-weight-bold);
   color: var(--color-text);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.header-logo-img {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+/* Home logo — left of header, navigates to dashboard */
+.header-home-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  text-decoration: none;
+  color: var(--color-text);
+  flex-shrink: 0;
+}
+
+.header-home-logo:hover {
+  color: var(--color-primary);
+}
+
+.header-home-logo svg {
+  width: 28px;
+  height: 28px;
 }
 
 .header-logo:hover .header-logo-text {
@@ -52,7 +104,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  flex: 1;
+  flex: 0 0 auto;
   min-width: 0;
   overflow: hidden;
 }
@@ -145,6 +197,7 @@
   align-items: center;
   gap: var(--space-1);
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .header-theme-toggle,
@@ -186,6 +239,7 @@
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-full);
   min-height: var(--touch-target);
+  margin-right: var(--space-3);
 }
 
 .header-user-btn:hover {
@@ -387,6 +441,10 @@
 @media (min-width: 1024px) {
   .hide-desktop {
     display: none !important;
+  }
+
+  .header-left {
+    justify-content: flex-start;
   }
 
   .header-sidebar-toggle {

@@ -105,7 +105,8 @@ function AppShell() {
   // For new layout, use AppLayout + Sidebar + Header + SidebarDrawer
   if (USE_NEW_LAYOUT) {
     return (
-      <AppLayout
+      <>
+        <AppLayout
         sidebar={
           <Sidebar
             navItems={NAV_ITEMS}
@@ -141,6 +142,17 @@ function AppShell() {
           <Outlet />
         </div>
       </AppLayout>
+      {navOpen && (
+        <SidebarDrawer
+          navItems={NAV_ITEMS}
+          isOpen={navOpen}
+          onClose={() => setNavOpen(false)}
+          userName={config.businessName}
+          userRole="Administrador"
+          onLogout={handleLogout}
+        />
+      )}
+      </>
     );
   }
 

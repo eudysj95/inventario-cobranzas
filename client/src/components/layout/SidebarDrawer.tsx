@@ -152,11 +152,14 @@ export default function SidebarDrawer({
     }
   }, [isOpen, onClose]);
 
-  // Close on route change
+  // Close on route change (only when pathname actually changes, not on initial mount)
+  const prevPathname = useRef(location.pathname);
+
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && prevPathname.current !== location.pathname) {
       onClose();
     }
+    prevPathname.current = location.pathname;
   }, [location.pathname, isOpen, onClose]);
 
   if (!isOpen) {

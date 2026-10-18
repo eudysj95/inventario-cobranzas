@@ -73,8 +73,8 @@ function ProductRow({
 
   return (
     <tr>
-      <td style={{ fontWeight: "var(--font-weight-medium)" }}>{product.name}</td>
-      <td>
+      <td data-label="Producto" style={{ fontWeight: "var(--font-weight-medium)" }}>{product.name}</td>
+      <td data-label="Unidades">
         <div className="chips" style={{ gap: "var(--space-2)", flexWrap: "wrap" }}>
           {stateCounts.map((chip) => (
             <span
@@ -91,9 +91,9 @@ function ProductRow({
           </span>
         </div>
       </td>
-      <td>{formatCurrency(product.price, config)}</td>
-      <td style={{ whiteSpace: "nowrap" }}>{formatDate(new Date(product.updated_at), config)}</td>
-      <td>
+      <td data-label="Precio">{formatCurrency(product.price, config)}</td>
+      <td data-label="Última actualización" style={{ whiteSpace: "nowrap" }}>{formatDate(new Date(product.updated_at), config)}</td>
+      <td data-label="Acciones">
         <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
           <Dropdown
             trigger={
@@ -124,7 +124,7 @@ export default function InventoryList() {
   const navigate = useNavigate();
 
   const [searchInput, setSearchInput] = useState("");
-  const [filters, setFilters] = useState({ search: "", state: "" });
+  const [filters, setFilters] = useState({ search: "" });
   const [bannerError, setBannerError] = useState<string | null>(null);
 
   const { data: products = [], isPending, isError } = useProducts(filters);
@@ -132,10 +132,6 @@ export default function InventoryList() {
   function applySearch(event: React.FormEvent) {
     event.preventDefault();
     setFilters((prev) => ({ ...prev, search: searchInput.trim() }));
-  }
-
-  function applyState(event: React.ChangeEvent<HTMLSelectElement>) {
-    setFilters((prev) => ({ ...prev, state: event.target.value }));
   }
 
   function openCreate() {
@@ -185,22 +181,8 @@ export default function InventoryList() {
         <Button type="submit" style={{ minHeight: "var(--touch-target)" }}>
           Buscar
         </Button>
-        <div className="form-row" style={{ flexDirection: "column", gap: "var(--space-1)", minWidth: "160px" }}>
-          <label htmlFor="inventory-state" className="label">Filtrar por estado</label>
-          <select
-            id="inventory-state"
-            value={filters.state}
-            onChange={applyState}
-            aria-label="Filtrar por estado"
-            className="input select"
-          >
-            {PRODUCT_STATES.map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
-        </div>
-        {(searchInput || filters.state) && (
-          <Button variant="ghost" size="sm" onClick={() => { setSearchInput(""); setFilters({ search: "", state: "" }); }}>
+        {searchInput && (
+          <Button variant="ghost" size="sm" onClick={() => { setSearchInput(""); setFilters({ search: "" }); }}>
             Limpiar filtros
           </Button>
         )}
@@ -256,7 +238,7 @@ export default function InventoryList() {
         </Card>
       ) : (
         <Card>
-          <div className="table-wrap" role="region" aria-label="Lista de productos" tabIndex={0} style={{ overflowX: 'auto' }}>
+          <div className="table-wrap" role="region" aria-label="Lista de productos" tabIndex={0}>
             <table className="table">
               <thead>
                 <tr>
