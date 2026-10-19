@@ -6,9 +6,16 @@
 //   PATCH  /api/products/:id            edit; quantity is a SIGNED stock adjustment
 //   DELETE /api/products/:id            409-guarded delete
 //
-// All requests go through the shared wrapper (same-origin, session cookie sent
-// automatically) and every mutation invalidates the ['products'] query cache so
-// the list and any open detail views refetch.
+// Variant routes (Fase 1 — variantes de producto):
+//   POST   /api/products/:id/variants           create {name, sku?, stock?,
+//                                                 min_stock?, critical_stock?,
+//                                                 position?, attributes: []} -> 201
+//   GET    /api/products/:id/variants           list sorted by position with attributes
+//   PATCH  /api/products/:id/variants/:vid/stock  { delta } signed, stock >= 0
+//   PATCH  /api/products/:id/variants/:vid/active { active }
+// Every variant mutation invalidates the ['products'] query cache so the
+// product list and detail views (including derived parent stock) refetch
+// (R10: parent cache invalidation).
 //
 // PATCH DELTA CONTRACT (slice-3 deviation, honored here): the server ADDS the
 // `quantity` value to current stock (positive restocks, negative removes units,
@@ -68,6 +75,53 @@ export async function deleteProduct(id) {
   return apiRequest(`/api/products/${id}`, { method: 'DELETE' });
 }
 
+/** GET /api/products/:id/variants → array of variants with their attributes. */
+export async function getVariants(productId, { signal } = {}) {
+  const data = await apiRequest(`/api/products/${productId}/variants`, { signal });
+  return data.variants ?? [];
+}
+
+/** POST /api/products/:id/variants → { variant }. */
+export async function createVariant(productId, input) {
+  const data = await apiRequest(`/api/products/${productId}/variants`, {
+    method: 'POST',
+    body: input,
+  });
+  return data.variant;
+}
+
+/** PATCH /api/products/:id/variants/:variantId/stock → { variant }. */
+export async function updateVariantStock(productId, variantId, delta) {
+  const data = await apiRequest(
+    `/api/products/${productId}/variants/${variantId}/stock`,
+    { method: 'PATCH', body: { delta } }
+  );
+  return data.variant;
+}
+
+/** PATCH /api/products/:id/variants/:variantId/active → { ok: true }. */
+export async function setVariantActive(productId, variantId, active) {
+  return apiRequest(
+    `/api/products/${productId}/variants/${variantId}/active`,
+    { method: 'PATCH', body: { active } }
+  );
+}
+
+/** Signed delta the variant stock endpoint expects: target − current. */
+export function variantStockDelta(currentStock, targetStock) {
+  return targetStock - currentStock;
+}
+
+/**
+ * Alert badge for a variant, evaluated on the fly (spec R9 — no stored state):
+ * stock <= critical_stock → 'critical'; stock <= min_stock → 'min'; else null.
+ */
+export function variantAlert(variant) {
+  if (variant.stock <= variant.critical_stock) return 'critical';
+  if (variant.stock <= variant.min_stock) return 'min';
+  return null;
+}
+
 /** List query: keyed by the filters object so search/state changes refetch. */
 export function useProducts(filters) {
   return useQuery({
@@ -103,6 +157,42 @@ export function useProductMutations() {
     },
     async remove(id) {
       await deleteProduct(id);
+      await invalidate();
+    },
+  };
+}
+
+/** Variants of one product. Keyed by product id; disabled until an id exists. */
+export function useVariants(productId) {
+  return useQuery({
+    queryKey: [...PRODUCTS_KEY, 'variants', productId],
+    queryFn: ({ signal }) => getVariants(productId, { signal }),
+    enabled: Boolean(productId),
+  });
+}
+
+/**
+ * Variant mutations. Every success invalidates every ['products']-prefixed
+ * query (list, detail and the variants of the affected product) so the
+ * parent's derived stock and UI stay consistent (R10).
+ */
+export function useVariantMutations() {
+  const queryClient = useQueryClient();
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: PRODUCTS_KEY });
+
+  return {
+    async create(productId, input) {
+      const variant = await createVariant(productId, input);
+      await invalidate();
+      return variant;
+    },
+    async updateStock(productId, variantId, delta) {
+      const variant = await updateVariantStock(productId, variantId, delta);
+      await invalidate();
+      return variant;
+    },
+    async setActive(productId, variantId, active) {
+      await setVariantActive(productId, variantId, active);
       await invalidate();
     },
   };
