@@ -33,6 +33,52 @@ CREATE TABLE IF NOT EXISTS products (
 CREATE INDEX IF NOT EXISTS products_name_idx ON products (name);
 
 -- ---------------------------------------------------------------------------
+-- product_variants — stock independiente por variante de un producto padre.
+--   * product_id FK RESTRICT: una variante nunca puede quedar huérfana.
+--   * stock propio >= 0 (CHECK); toda mutación se ejecuta dentro de
+--     withTransaction para que sea all-or-nothing.
+--   * min_stock / critical_stock: umbrales de alerta, evaluados on-the-fly
+--     (sin estado almacenado).
+--   * active: las variantes inactivas se excluyen del SUM del stock del
+--     padre y de la UI.
+--   * position: orden de listado de variantes.
+--   * El stock general del padre es DERIVADO en tiempo de consulta:
+--     SUM(stock) de las variantes activas, con fallback a products.quantity
+--     cuando no hay variantes activas (ver product_states). products.quantity
+--     nunca se espeja en variantes y viceversa.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS product_variants (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id     UUID NOT NULL REFERENCES products (id) ON DELETE RESTRICT,
+  name           TEXT NOT NULL,
+  sku            TEXT UNIQUE,
+  stock          INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
+  min_stock      INTEGER NOT NULL DEFAULT 0 CHECK (min_stock >= 0),
+  critical_stock INTEGER NOT NULL DEFAULT 0 CHECK (critical_stock >= 0),
+  active         BOOLEAN NOT NULL DEFAULT TRUE,
+  position       INTEGER NOT NULL DEFAULT 0,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS product_variants_product_idx ON product_variants (product_id);
+CREATE INDEX IF NOT EXISTS product_variants_sku_idx ON product_variants (sku);
+
+-- ---------------------------------------------------------------------------
+-- variant_attributes — atributos definibles por el usuario (talla, color, …)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS variant_attributes (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  variant_id     UUID NOT NULL REFERENCES product_variants (id) ON DELETE RESTRICT,
+  attribute_name TEXT NOT NULL,
+  attribute_value TEXT NOT NULL,
+  position       INTEGER NOT NULL DEFAULT 0,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS variant_attributes_variant_idx ON variant_attributes (variant_id);
+
+-- ---------------------------------------------------------------------------
 -- customers — phone is optional; it is REQUIRED to render wa.me links.
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS customers (
@@ -270,7 +316,10 @@ SELECT
     WHEN COALESCE(cd.open_units, 0) > 0 THEN 'credit'
     WHEN p.quantity > 0 THEN 'available'
     ELSE 'sold'
-  END AS state
+  END AS state,
+  -- stock general del padre: SUM de variantes activas, fallback a quantity
+  -- cuando el producto no tiene variantes activas (Fase 1, R6/R7).
+  COALESCE(vs.variant_stock, p.quantity) AS stock
 FROM products p
 LEFT JOIN (
   SELECT product_id,
@@ -290,4 +339,9 @@ LEFT JOIN (
   SELECT product_id, SUM(units) AS units
   FROM cash_sales
   GROUP BY product_id
-) cs ON cs.product_id = p.id;
+) cs ON cs.product_id = p.id
+LEFT JOIN (
+  SELECT product_id, SUM(stock) FILTER (WHERE active) AS variant_stock
+  FROM product_variants
+  GROUP BY product_id
+) vs ON vs.product_id = p.id;
