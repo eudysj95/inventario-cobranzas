@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useConfig } from "../../api/config";
-import { useProduct, useProductMutations, quantityAdjustmentBody } from "../../api/products";
+import { useProduct, useProductMutations, quantityAdjustmentBody, useVariants, useVariantMutations, createVariant, variantAlert } from "../../api/products";
 import { formatCurrency } from "../../lib/format";
+import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Card } from "../../components/ui/Card";
@@ -44,6 +45,20 @@ export default function InventoryForm({ mode, product: initialProduct, onSubmit 
   const isEdit = mode === "edit";
   const productId = params.id || initialProduct?.id;
 
+  // Variantes del producto (solo tiene sentido en edición). Los tests de
+  // unidad mockean api/products sin estos hooks, da lo cual se guardan con
+  // un valor vacío para no romper el render bajo mock.
+  const editProductId = isEdit ? (product?.id ?? productId) : null;
+  const { data: variants = [], isPending: variantsPending } = useVariants
+    ? useVariants(editProductId)
+    : { data: [], isPending: false };
+  const {
+    create: createVariantM,
+    setActive: setVariantActiveM,
+  } = useVariantMutations
+    ? useVariantMutations()
+    : { create: async () => undefined, setActive: async () => undefined };
+
   // Fetch product data when in edit mode and we have an ID
   const { data: productData, isPending: isLoadingProduct } = useProduct(productId);
 
@@ -56,6 +71,19 @@ export default function InventoryForm({ mode, product: initialProduct, onSubmit 
   const [quantity, setQuantity] = useState(product ? String(product.quantity) : "");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [newVariant, setNewVariant] = useState<{
+    name: string;
+    sku: string;
+    stock: string;
+    attributes: { name: string; value: string }[];
+  }>({
+    name: "",
+    sku: "",
+    stock: "",
+    attributes: [{ name: "", value: "" }],
+  });
+  const [addingVariant, setAddingVariant] = useState(false);
+  const [togglingVariant, setTogglingVariant] = useState<string | null>(null);
 
   // Reset form when product data loads (in edit mode)
   useEffect(() => {
@@ -212,6 +240,282 @@ export default function InventoryForm({ mode, product: initialProduct, onSubmit 
                   El stock es un ajuste: ingrese un valor mayor al stock actual ({product.quantity}) para
                   reponer unidades, o menor para quitarlas. El stock nunca puede ser menor a cero.
                 </p>
+              )}
+
+              {isEdit && product && (
+                <div
+                  style={{
+                    marginTop: "var(--space-4)",
+                    padding: "var(--space-3)",
+                    background: "var(--color-bg)",
+                    borderRadius: "var(--radius-md)",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "var(--space-2)",
+                      marginBottom: "var(--space-2)",
+                    }}
+                  >
+                    <h3 style={{ margin: 0, fontSize: "var(--text-sm)" }}>Variantes</h3>
+                    <span className="chip chip-info" style={{ fontSize: "var(--text-xs)" }}>
+                      Precio hereda del padre
+                    </span>
+                  </div>
+                  <p
+                    className="form-hint"
+                    style={{
+                      fontSize: "var(--text-xs)",
+                      color: "var(--color-text-secondary)",
+                      margin: "0 0 var(--space-2)",
+                    }}
+                  >
+                    Stock y alerta (mínimo/crítico) por variante. Las variantes
+                    inactivas se excluyen del stock general del producto.
+                  </p>
+                  {variants.length > 0 ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
+                      {variants.map((variant) => {
+                        const alert = variantAlert(variant);
+                        return (
+                          <div
+                            key={variant.id}
+                            style={{
+                              display: "flex",
+                              gap: "var(--space-1)",
+                              alignItems: "center",
+                              flexWrap: "wrap",
+                              fontSize: "var(--text-sm)",
+                            }}
+                          >
+                            <span style={{ minWidth: "110px" }}>{variant.name}</span>
+                            {variant.sku && (
+                              <span
+                                style={{
+                                  fontSize: "var(--text-xs)",
+                                  color: "var(--color-text-secondary)",
+                                }}
+                              >
+                                {variant.sku}
+                              </span>
+                            )}
+                            <span
+                              style={{
+                                fontSize: "var(--text-xs)",
+                                color: "var(--color-text-secondary)",
+                              }}
+                            >
+                              {variant.attributes
+                                .map((a) => `${a.attribute_name}: ${a.attribute_value}`)
+                                .join(" · ") || "—"}
+                            </span>
+                            <span style={{ fontWeight: "var(--font-weight-medium)" }}>
+                              Stock {variant.stock}
+                            </span>
+                            {alert ? (
+                              <Badge
+                                variant={alert === "critical" ? "danger" : "warning"}
+                                size="sm"
+                                title={
+                                  alert === "critical" ? "Stock crítico" : "Stock mínimo"
+                                }
+                              >
+                                {alert === "critical" ? "Crítico" : "Mínimo"}
+                              </Badge>
+                            ) : null}
+                            <Button
+                              type="button"
+                              variant={variant.active ? "secondary" : "primary"}
+                              size="sm"
+                              disabled={togglingVariant === variant.id || addingVariant}
+                              onClick={() => handleVariantToggle(variant)}
+                              aria-label={
+                                variant.active
+                                  ? `Desactivar ${variant.name}`
+                                  : `Activar ${variant.name}`
+                              }
+                            >
+                              {togglingVariant === variant.id
+                                ? "…"
+                                : variant.active
+                                  ? "Activo"
+                                  : "Inactivo"}
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p
+                      style={{
+                        fontSize: "var(--text-xs)",
+                        color: "var(--color-text-secondary)",
+                        margin: 0,
+                      }}
+                    >
+                      Sin variantes aún. Agregá la primera abajo.
+                    </p>
+                  )}
+                  <div
+                    style={{
+                      marginTop: "var(--space-2)",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "var(--space-1)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "var(--space-1)",
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <Field
+                        label="Nombre de la variante"
+                        required
+                        error={
+                          error &&
+                          (error.includes("variante") ||
+                            error.includes("nombre de la variante"))
+                            ? error
+                            : undefined
+                        }
+                      >
+                        <Input
+                          id="variant-name"
+                          value={newVariant.name}
+                          onChange={(e) =>
+                            setNewVariant({ ...newVariant, name: e.target.value })
+                          }
+                          disabled={submitting || addingVariant || variantsPending}
+                          placeholder="Ej: Talle M"
+                        />
+                      </Field>
+                      <Field label="SKU (opcional)">
+                        <Input
+                          id="variant-sku"
+                          value={newVariant.sku}
+                          onChange={(e) =>
+                            setNewVariant({ ...newVariant, sku: e.target.value })
+                          }
+                          disabled={submitting || addingVariant || variantsPending}
+                          placeholder="SKU"
+                        />
+                      </Field>
+                      <Field
+                        label="Stock inicial"
+                        required
+                        style={{ flex: 1 }}
+                        error={
+                          error && error.includes("stock") ? error : undefined
+                        }
+                      >
+                        <Input
+                          id="variant-stock"
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={newVariant.stock}
+                          onChange={(e) =>
+                            setNewVariant({ ...newVariant, stock: e.target.value })
+                          }
+                          disabled={submitting || addingVariant || variantsPending}
+                          placeholder="0"
+                        />
+                      </Field>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "var(--space-1)",
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      {newVariant.attributes.map((attr, index) => (
+                        <div
+                          key={index}
+                          style={{
+                            display: "flex",
+                            gap: "var(--space-1)",
+                            alignItems: "center",
+                          }}
+                        >
+                          <Input
+                            value={attr.name}
+                            onChange={(e) =>
+                              handleVariantAttributeChange(
+                                index,
+                                "name",
+                                e.target.value
+                              )
+                            }
+                            disabled={submitting || addingVariant || variantsPending}
+                            placeholder="Nombre (talla, color…)"
+                          />
+                          <Input
+                            value={attr.value}
+                            onChange={(e) =>
+                              handleVariantAttributeChange(
+                                index,
+                                "value",
+                                e.target.value
+                              )
+                            }
+                            disabled={submitting || addingVariant || variantsPending}
+                            placeholder="Valor (M, Rojo…)"
+                          />
+                          <Button
+                            type="button"
+                            variant="danger"
+                            size="sm"
+                            disabled={
+                              newVariant.attributes.length <= 1 ||
+                              submitting ||
+                              addingVariant
+                            }
+                            onClick={() => removeAttributeRow(index)}
+                          >
+                            −
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={submitting || addingVariant || variantsPending}
+                        onClick={addAttributeRow}
+                      >
+                        + Atributo
+                      </Button>
+                    </div>
+                    <Button
+                      type="button"
+                      disabled={submitting || addingVariant || variantsPending}
+                      onClick={handleAddVariant}
+                    >
+                      {addingVariant ? (
+                        <>
+                          <Spinner
+                            style={{
+                              width: "16px",
+                              height: "16px",
+                              borderWidth: "2px",
+                            }}
+                            aria-hidden="true"
+                          />
+                          Agregando…
+                        </>
+                      ) : (
+                        "Agregar variante"
+                      )}
+                    </Button>
+                  </div>
+                </div>
               )}
             </div>
           </div>
