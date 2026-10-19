@@ -321,7 +321,9 @@ export default function productsRouter(pool) {
   // ---------------------------------------------------------------------------
   // Variant sub-routes mounted under /:id/variants (product_id = req.params.id).
   // ---------------------------------------------------------------------------
-  const variantRoutes = Router();
+  // mergeParams: true para que req.params.id (producto padre) sea visible
+  // dentro de este sub-router montado bajo /:id/variants.
+  const variantRoutes = Router({ mergeParams: true });
 
   /** Shape of a variant row + its attributes, as returned by the API. */
   function toVariantRow(row, attributes = []) {
@@ -455,7 +457,7 @@ export default function productsRouter(pool) {
       });
     } catch (err) {
       // Duplicate SKU (unique index) -> clean 400 instead of a 500.
-      if (err.code === '23503' && err.constraint === 'product_variants_sku_key') {
+      if (err.code === '23505' && err.constraint === 'product_variants_sku_key') {
         return badRequest(res, 'SKU already exists');
       }
       throw err;
