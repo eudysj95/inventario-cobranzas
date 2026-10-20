@@ -66,7 +66,11 @@ async function main() {
 
   const deleteIds = toDelete.map((r) => r.id);
 
-  // 2. Borrar dependencias en orden (FK RESTRICT)
+  // 2. Borrar dependencias en orden (FK RESTRICT, cadena: variant_attributes -> product_variants -> products)
+  await pool.query(
+    'DELETE FROM variant_attributes WHERE variant_id IN (SELECT id FROM product_variants WHERE product_id = ANY($1::uuid[]))',
+    [deleteIds]
+  );
   await pool.query('DELETE FROM product_variants WHERE product_id = ANY($1::uuid[])', [deleteIds]);
   await pool.query('DELETE FROM apartados WHERE product_id = ANY($1::uuid[])', [deleteIds]);
   await pool.query('DELETE FROM customer_debts WHERE product_id = ANY($1::uuid[])', [deleteIds]);
