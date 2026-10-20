@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useConfig } from "../../api/config";
-import { useProduct, useProductMutations, quantityAdjustmentBody, useVariants, useVariantMutations, createVariant, variantAlert } from "../../api/products";
+import { useProduct, useProductMutations, quantityAdjustmentBody, useProductAttributes, useProductAttributeMutations } from "../../api/products";
 import { formatCurrency } from "../../lib/format";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -45,19 +45,11 @@ export default function InventoryForm({ mode, product: initialProduct, onSubmit 
   const isEdit = mode === "edit";
   const productId = params.id || initialProduct?.id;
 
-  // Variantes del producto (solo tiene sentido en edición). Los tests de
-  // unidad mockean api/products sin estos hooks, da lo cual se guardan con
-  // un valor vacío para no romper el render bajo mock.
-  const editProductId = isEdit ? (product?.id ?? productId) : null;
-  const { data: variants = [], isPending: variantsPending } = useVariants
-    ? useVariants(editProductId)
+  const { create: createProductM, update: updateProductM } = useProductMutations();
+  const { createAttribute, updateAttribute, removeAttribute } = useProductAttributeMutations();
+  const { data: attributesData = [], isPending: attributesPending } = productId
+    ? useProductAttributes(productId)
     : { data: [], isPending: false };
-  const {
-    create: createVariantM,
-    setActive: setVariantActiveM,
-  } = useVariantMutations
-    ? useVariantMutations()
-    : { create: async () => undefined, setActive: async () => undefined };
 
   // Fetch product data when in edit mode and we have an ID
   const { data: productData, isPending: isLoadingProduct } = useProduct(productId);
@@ -69,21 +61,14 @@ export default function InventoryForm({ mode, product: initialProduct, onSubmit 
   const [description, setDescription] = useState(product?.description ?? "");
   const [price, setPrice] = useState(product ? String(product.price) : "");
   const [quantity, setQuantity] = useState(product ? String(product.quantity) : "");
+  const [attributes, setAttributes] = useState<{
+    id?: string;
+    attribute_name: string;
+    attribute_value: string;
+    position: number;
+  }>([]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [newVariant, setNewVariant] = useState<{
-    name: string;
-    sku: string;
-    stock: string;
-    attributes: { name: string; value: string }[];
-  }>({
-    name: "",
-    sku: "",
-    stock: "",
-    attributes: [{ name: "", value: "" }],
-  });
-  const [addingVariant, setAddingVariant] = useState(false);
-  const [togglingVariant, setTogglingVariant] = useState<string | null>(null);
 
   // Reset form when product data loads (in edit mode)
   useEffect(() => {
@@ -94,6 +79,22 @@ export default function InventoryForm({ mode, product: initialProduct, onSubmit 
       setQuantity(String(product.quantity));
     }
   }, [product, isEdit, isLoadingProduct]);
+
+  // Carga los atributos del producto en edición como estado local del form.
+  useEffect(() => {
+    if (isEdit && attributesData.length > 0) {
+      setAttributes(
+        [...attributesData]
+          .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+          .map((a, i) => ({
+            id: a.id,
+            attribute_name: a.attribute_name,
+            attribute_value: a.attribute_value,
+            position: i,
+          }))
+      );
+    }
+  }, [attributesData, isEdit]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -114,6 +115,8 @@ export default function InventoryForm({ mode, product: initialProduct, onSubmit 
 
     setSubmitting(true);
     try {
+      let productIdResolved: string | null = null;
+
       if (isEdit && productId && product) {
         const patch: any = {};
         if (values.name.trim() !== product.name) patch.name = values.name.trim();
@@ -122,13 +125,14 @@ export default function InventoryForm({ mode, product: initialProduct, onSubmit 
         }
         if (values.price !== product.price) patch.price = values.price;
         Object.assign(patch, quantityAdjustmentBody(product.quantity ?? 0, values.quantity));
-        
+
         if (Object.keys(patch).length > 0) {
-          await update(productId, patch);
+          await updateProductM(productId, patch);
         }
         if (onSubmit) {
           await onSubmit({ mode: "edit", id: productId, patch });
         }
+        productIdResolved = productId;
       } else {
         const body = {
           name: values.name.trim(),
@@ -136,15 +140,74 @@ export default function InventoryForm({ mode, product: initialProduct, onSubmit 
           price: values.price,
           quantity: values.quantity,
         };
-        await create(body);
+        const created = await createProductM(body);
         if (onSubmit) {
           await onSubmit({ mode: "create", body });
         }
+        productIdResolved = created?.id ?? null;
       }
+
+      // Guarda los atributos como sub-recurso del producto una vez que existe.
+      if (productIdResolved) {
+        await syncAttributes(productIdResolved);
+      }
+
       navigate("/inventory");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ocurrió un error inesperado.");
       setSubmitting(false);
+    }
+  }
+
+  function handleAttributeChange(index: number, field: "attribute_name" | "attribute_value", value: string) {
+    setAttributes((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
+  }
+
+  function addAttributeRow() {
+    setAttributes((prev) => [
+      ...prev,
+      { attribute_name: "", attribute_value: "", position: prev.length },
+    ]);
+  }
+
+  function removeAttributeRow(index: number) {
+    setAttributes((prev) => {
+      const next = [...prev];
+      next.splice(index, 1);
+      return next.map((a, i) => ({ ...a, position: i }));
+    });
+  }
+
+  /** Sincroniza las filas de atributos locales contra el sub-recurso del producto. */
+  async function syncAttributes(productId: string) {
+    const currentIds = new Set(
+      attributes.map((a) => a.id).filter((id): id is string => Boolean(id))
+    );
+    // Borra atributos del servidor que ya no están en el formulario.
+    for (const attr of attributesData) {
+      if (attr.id && !currentIds.has(attr.id)) {
+        await removeAttribute(productId, attr.id);
+      }
+    }
+    // Crea o actualiza cada fila del formulario.
+    for (const [index, attr] of attributes.entries()) {
+      if (attr.attribute_name.trim() === "" || attr.attribute_value.trim() === "") {
+        continue;
+      }
+      const payload = {
+        attribute_name: attr.attribute_name.trim(),
+        attribute_value: attr.attribute_value.trim(),
+        position: index,
+      };
+      if (attr.id) {
+        await updateAttribute(productId, attr.id, payload);
+      } else {
+        await createAttribute(productId, payload);
+      }
     }
   }
 
@@ -259,9 +322,11 @@ export default function InventoryForm({ mode, product: initialProduct, onSubmit 
                       marginBottom: "var(--space-2)",
                     }}
                   >
-                    <h3 style={{ margin: 0, fontSize: "var(--text-sm)" }}>Variantes</h3>
+                    <h3 style={{ margin: 0, fontSize: "var(--text-sm)" }}>
+                      Atributos personalizados
+                    </h3>
                     <span className="chip chip-info" style={{ fontSize: "var(--text-xs)" }}>
-                      Precio hereda del padre
+                      Ficha técnica
                     </span>
                   </div>
                   <p
@@ -272,80 +337,49 @@ export default function InventoryForm({ mode, product: initialProduct, onSubmit 
                       margin: "0 0 var(--space-2)",
                     }}
                   >
-                    Stock y alerta (mínimo/crítico) por variante. Las variantes
-                    inactivas se excluyen del stock general del producto.
+                    Atributos descriptivos del producto (ej. Talla: M, Color:
+                    Rojo). Son solo datos clave-valor: no tienen stock, ni SKU,
+                    ni activación propia.
                   </p>
-                  {variants.length > 0 ? (
+                  {attributes.length > 0 ? (
                     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
-                      {variants.map((variant) => {
-                        const alert = variantAlert(variant);
-                        return (
-                          <div
-                            key={variant.id}
-                            style={{
-                              display: "flex",
-                              gap: "var(--space-1)",
-                              alignItems: "center",
-                              flexWrap: "wrap",
-                              fontSize: "var(--text-sm)",
-                            }}
+                      {attributes.map((attr, index) => (
+                        <div
+                          key={attr.id ?? index}
+                          style={{
+                            display: "flex",
+                            gap: "var(--space-1)",
+                            alignItems: "center",
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          <Input
+                            value={attr.attribute_name}
+                            onChange={(e) =>
+                              handleAttributeChange(index, "attribute_name", e.target.value)
+                            }
+                            disabled={submitting || attributesPending}
+                            placeholder="Nombre (talla, color…)"
+                          />
+                          <Input
+                            value={attr.attribute_value}
+                            onChange={(e) =>
+                              handleAttributeChange(index, "attribute_value", e.target.value)
+                            }
+                            disabled={submitting || attributesPending}
+                            placeholder="Valor (M, Rojo…)"
+                          />
+                          <Button
+                            type="button"
+                            variant="danger"
+                            size="sm"
+                            disabled={submitting || attributesPending}
+                            onClick={() => removeAttributeRow(index)}
                           >
-                            <span style={{ minWidth: "110px" }}>{variant.name}</span>
-                            {variant.sku && (
-                              <span
-                                style={{
-                                  fontSize: "var(--text-xs)",
-                                  color: "var(--color-text-secondary)",
-                                }}
-                              >
-                                {variant.sku}
-                              </span>
-                            )}
-                            <span
-                              style={{
-                                fontSize: "var(--text-xs)",
-                                color: "var(--color-text-secondary)",
-                              }}
-                            >
-                              {variant.attributes
-                                .map((a) => `${a.attribute_name}: ${a.attribute_value}`)
-                                .join(" · ") || "—"}
-                            </span>
-                            <span style={{ fontWeight: "var(--font-weight-medium)" }}>
-                              Stock {variant.stock}
-                            </span>
-                            {alert ? (
-                              <Badge
-                                variant={alert === "critical" ? "danger" : "warning"}
-                                size="sm"
-                                title={
-                                  alert === "critical" ? "Stock crítico" : "Stock mínimo"
-                                }
-                              >
-                                {alert === "critical" ? "Crítico" : "Mínimo"}
-                              </Badge>
-                            ) : null}
-                            <Button
-                              type="button"
-                              variant={variant.active ? "secondary" : "primary"}
-                              size="sm"
-                              disabled={togglingVariant === variant.id || addingVariant}
-                              onClick={() => handleVariantToggle(variant)}
-                              aria-label={
-                                variant.active
-                                  ? `Desactivar ${variant.name}`
-                                  : `Activar ${variant.name}`
-                              }
-                            >
-                              {togglingVariant === variant.id
-                                ? "…"
-                                : variant.active
-                                  ? "Activo"
-                                  : "Inactivo"}
-                            </Button>
-                          </div>
-                        );
-                      })}
+                            −
+                          </Button>
+                        </div>
+                      ))}
                     </div>
                   ) : (
                     <p
@@ -355,164 +389,24 @@ export default function InventoryForm({ mode, product: initialProduct, onSubmit 
                         margin: 0,
                       }}
                     >
-                      Sin variantes aún. Agregá la primera abajo.
+                      Sin atributos aún. Agregá el primero abajo.
                     </p>
                   )}
                   <div
                     style={{
                       marginTop: "var(--space-2)",
                       display: "flex",
-                      flexDirection: "column",
                       gap: "var(--space-1)",
+                      alignItems: "center",
                     }}
                   >
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "var(--space-1)",
-                        alignItems: "center",
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <Field
-                        label="Nombre de la variante"
-                        required
-                        error={
-                          error &&
-                          (error.includes("variante") ||
-                            error.includes("nombre de la variante"))
-                            ? error
-                            : undefined
-                        }
-                      >
-                        <Input
-                          id="variant-name"
-                          value={newVariant.name}
-                          onChange={(e) =>
-                            setNewVariant({ ...newVariant, name: e.target.value })
-                          }
-                          disabled={submitting || addingVariant || variantsPending}
-                          placeholder="Ej: Talle M"
-                        />
-                      </Field>
-                      <Field label="SKU (opcional)">
-                        <Input
-                          id="variant-sku"
-                          value={newVariant.sku}
-                          onChange={(e) =>
-                            setNewVariant({ ...newVariant, sku: e.target.value })
-                          }
-                          disabled={submitting || addingVariant || variantsPending}
-                          placeholder="SKU"
-                        />
-                      </Field>
-                      <Field
-                        label="Stock inicial"
-                        required
-                        style={{ flex: 1 }}
-                        error={
-                          error && error.includes("stock") ? error : undefined
-                        }
-                      >
-                        <Input
-                          id="variant-stock"
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={newVariant.stock}
-                          onChange={(e) =>
-                            setNewVariant({ ...newVariant, stock: e.target.value })
-                          }
-                          disabled={submitting || addingVariant || variantsPending}
-                          placeholder="0"
-                        />
-                      </Field>
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "var(--space-1)",
-                        alignItems: "center",
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      {newVariant.attributes.map((attr, index) => (
-                        <div
-                          key={index}
-                          style={{
-                            display: "flex",
-                            gap: "var(--space-1)",
-                            alignItems: "center",
-                          }}
-                        >
-                          <Input
-                            value={attr.name}
-                            onChange={(e) =>
-                              handleVariantAttributeChange(
-                                index,
-                                "name",
-                                e.target.value
-                              )
-                            }
-                            disabled={submitting || addingVariant || variantsPending}
-                            placeholder="Nombre (talla, color…)"
-                          />
-                          <Input
-                            value={attr.value}
-                            onChange={(e) =>
-                              handleVariantAttributeChange(
-                                index,
-                                "value",
-                                e.target.value
-                              )
-                            }
-                            disabled={submitting || addingVariant || variantsPending}
-                            placeholder="Valor (M, Rojo…)"
-                          />
-                          <Button
-                            type="button"
-                            variant="danger"
-                            size="sm"
-                            disabled={
-                              newVariant.attributes.length <= 1 ||
-                              submitting ||
-                              addingVariant
-                            }
-                            onClick={() => removeAttributeRow(index)}
-                          >
-                            −
-                          </Button>
-                        </div>
-                      ))}
-                      <Button
-                        type="button"
-                        size="sm"
-                        disabled={submitting || addingVariant || variantsPending}
-                        onClick={addAttributeRow}
-                      >
-                        + Atributo
-                      </Button>
-                    </div>
                     <Button
                       type="button"
-                      disabled={submitting || addingVariant || variantsPending}
-                      onClick={handleAddVariant}
+                      size="sm"
+                      disabled={submitting || attributesPending}
+                      onClick={addAttributeRow}
                     >
-                      {addingVariant ? (
-                        <>
-                          <Spinner
-                            style={{
-                              width: "16px",
-                              height: "16px",
-                              borderWidth: "2px",
-                            }}
-                            aria-hidden="true"
-                          />
-                          Agregando…
-                        </>
-                      ) : (
-                        "Agregar variante"
-                      )}
+                      + Atributo
                     </Button>
                   </div>
                 </div>

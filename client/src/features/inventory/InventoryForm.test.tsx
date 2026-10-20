@@ -28,6 +28,12 @@ vi.mock("../../api/products", () => ({
     update: vi.fn().mockResolvedValue(mockProducts[0]),
     remove: vi.fn().mockResolvedValue(undefined),
   })),
+  useProductAttributes: vi.fn(() => ({ data: [], isPending: false })),
+  useProductAttributeMutations: vi.fn(() => ({
+    createAttribute: vi.fn().mockResolvedValue({ id: "attr-1" }),
+    updateAttribute: vi.fn().mockResolvedValue(undefined),
+    removeAttribute: vi.fn().mockResolvedValue(undefined),
+  })),
   quantityAdjustmentBody: vi.fn((current, target) => ({ quantity: target - current })),
 }));
 

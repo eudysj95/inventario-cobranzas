@@ -33,50 +33,25 @@ CREATE TABLE IF NOT EXISTS products (
 CREATE INDEX IF NOT EXISTS products_name_idx ON products (name);
 
 -- ---------------------------------------------------------------------------
--- product_variants — stock independiente por variante de un producto padre.
---   * product_id FK RESTRICT: una variante nunca puede quedar huérfana.
---   * stock propio >= 0 (CHECK); toda mutación se ejecuta dentro de
---     withTransaction para que sea all-or-nothing.
---   * min_stock / critical_stock: umbrales de alerta, evaluados on-the-fly
---     (sin estado almacenado).
---   * active: las variantes inactivas se excluyen del SUM del stock del
---     padre y de la UI.
---   * position: orden de listado de variantes.
---   * El stock general del padre es DERIVADO en tiempo de consulta:
---     SUM(stock) de las variantes activas, con fallback a products.quantity
---     cuando no hay variantes activas (ver product_states). products.quantity
---     nunca se espeja en variantes y viceversa.
+-- product_attributes — ficha técnica clave-valor del producto (sin variantes).
+--   * product_id FK references products(id) ON DELETE CASCADE: borrar el
+--     producto borra sus atributos.
+--   * attribute_name / attribute_value: datos descriptivos únicamente
+--     (clave-valor). No hay stock, ni SKU, ni active por atributo: precio y
+--     stock siguen a nivel de producto (products.price / products.quantity).
+--   * position: orden de listado de los atributos.
 -- ---------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS product_variants (
+CREATE TABLE IF NOT EXISTS product_attributes (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  product_id     UUID NOT NULL REFERENCES products (id) ON DELETE RESTRICT,
-  name           TEXT NOT NULL,
-  sku            TEXT UNIQUE,
-  stock          INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
-  min_stock      INTEGER NOT NULL DEFAULT 0 CHECK (min_stock >= 0),
-  critical_stock INTEGER NOT NULL DEFAULT 0 CHECK (critical_stock >= 0),
-  active         BOOLEAN NOT NULL DEFAULT TRUE,
+  product_id     UUID NOT NULL REFERENCES products (id) ON DELETE CASCADE,
+  attribute_name TEXT NOT NULL,
+  attribute_value TEXT NOT NULL,
   position       INTEGER NOT NULL DEFAULT 0,
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS product_variants_product_idx ON product_variants (product_id);
-CREATE INDEX IF NOT EXISTS product_variants_sku_idx ON product_variants (sku);
-
--- ---------------------------------------------------------------------------
--- variant_attributes — atributos definibles por el usuario (talla, color, …)
--- ---------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS variant_attributes (
-  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  variant_id     UUID NOT NULL REFERENCES product_variants (id) ON DELETE RESTRICT,
-  attribute_name TEXT NOT NULL,
-  attribute_value TEXT NOT NULL,
-  position       INTEGER NOT NULL DEFAULT 0,
-  created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS variant_attributes_variant_idx ON variant_attributes (variant_id);
+CREATE INDEX IF NOT EXISTS product_attributes_product_idx ON product_attributes (product_id);
 
 -- ---------------------------------------------------------------------------
 -- customers — phone is optional; it is REQUIRED to render wa.me links.
@@ -265,27 +240,11 @@ CREATE TABLE IF NOT EXISTS admins (
 -- product_states — derived per-unit state breakdown (approved amendment A).
 -- Updated S1: added cash-sales contribution to sold_units and total_units.
 --
--- Columns
---   apartado_units  units currently reserved by PENDING apartados
---   credit_units    units currently held by OPEN credit debts
---   sold_units      lifetime sold: PAID apartado units + CLOSED debt units
---                   + cash-sale units (new in S1)
---   available_units units currently free in stock
---   total_units     available + apartado + credit + sold (display helper)
---   state           dominant display state, precedence
---                   apartado > credit > available > sold
---                   (unchanged — cash units only feed 'sold' fallback when
---                    quantity = 0, so products.js filter set remains valid)
---
--- NOTE on available_units: products.quantity ALREADY excludes reserved and
--- on-credit units (they are decremented atomically in the same TXN that
--- creates the apartado/debt). available_units is therefore products.quantity
--- itself. Re-subtracting pending/credit units would double-count and go
--- negative (e.g. quantity 5, apartado 2 -> stock 3, available must be 3).
--- The amendment formula "quantity - pending - open" assumed a model where
--- quantity is a lifetime total; the spec + design mandate the decrement
--- model instead, so the view follows the decrement model.
+-- NOTE: se elimina y vuelve a crear la vista en cada migración porque
+-- CREATE OR REPLACE VIEW no permite cambiar el tipo de una columna existente
+-- (p. ej. al pasar de `stock` bigint —SUM de variantes— a integer —quantity—).
 -- ============================================================================
+DROP VIEW IF EXISTS product_states;
 CREATE OR REPLACE VIEW product_states AS
 SELECT
   p.id,
@@ -317,9 +276,8 @@ SELECT
     WHEN p.quantity > 0 THEN 'available'
     ELSE 'sold'
   END AS state,
-  -- stock general del padre: SUM de variantes activas, fallback a quantity
-  -- cuando el producto no tiene variantes activas (Fase 1, R6/R7).
-  COALESCE(vs.variant_stock, p.quantity) AS stock
+  -- stock general del producto: products.quantity (sin variantes, Fase 1 revertida).
+  p.quantity AS stock
 FROM products p
 LEFT JOIN (
   SELECT product_id,
@@ -339,9 +297,4 @@ LEFT JOIN (
   SELECT product_id, SUM(units) AS units
   FROM cash_sales
   GROUP BY product_id
-) cs ON cs.product_id = p.id
-LEFT JOIN (
-  SELECT product_id, SUM(stock) FILTER (WHERE active) AS variant_stock
-  FROM product_variants
-  GROUP BY product_id
-) vs ON vs.product_id = p.id;
+) cs ON cs.product_id = p.id;

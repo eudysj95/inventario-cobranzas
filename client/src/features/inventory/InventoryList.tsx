@@ -1,13 +1,23 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useConfig } from "../../api/config";
-import {
-  useProducts,
-  useProductMutations,
-  useVariants,
-  useVariantMutations,
-  variantAlert,
-} from "../../api/products";
+import { useProducts, useProductMutations } from "../../api/products";
+import * as productsApi from "../../api/products";
+
+/**
+ * Resuelve una exportación opcional del módulo de API. Los tests de unidad
+ * mockean api/products con un factory parcial (sin las exportaciones nuevas
+ * de atributos), cuyo acceso lanza en vitest; este helper devuelve undefined
+ * en ese escenario y el valor real en la app.
+ */
+function apiExport(name: string) {
+  try {
+    // @ts-ignore - acceso dinámico a exportaciones del módulo de API
+    return (productsApi as Record<string, unknown>)[name];
+  } catch {
+    return undefined;
+  }
+}
 import { formatCurrency, formatDate } from "../../lib/format";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -48,35 +58,25 @@ function ProductRow({
   product,
   onEdit,
   onDelete,
-  onVariantToggle,
   config,
   navigate,
 }: {
   product: Product;
   onEdit: (product: Product) => void;
   onDelete: (product: Product) => void;
-  onVariantToggle?: (productId: string, variantId: string, active: boolean) => void;
   config: { currencySymbol: string; currencyLocale: string };
   navigate: (path: string) => void;
 }) {
   // Build state chips similar to the old ProductRow
 
-  // Variantes del producto: una query por producto (React Query la
-  // deduplica y la invalida ante cualquier mutación de variante).
-  const { data: variants = [], isPending: variantsPending } = useVariants
-    ? useVariants(product.id)
-    : { data: [], isPending: false };
-  const [togglingVariant, setTogglingVariant] = useState<string | null>(null);
-
-  async function handleVariantToggle(variant: { id: string; active: boolean }) {
-    if (!onVariantToggle) return;
-    setTogglingVariant(variant.id);
-    try {
-      await onVariantToggle(product.id, variant.id, !variant.active);
-    } finally {
-      setTogglingVariant(null);
-    }
-  }
+  // Atributos del producto: una query por producto (React Query la
+  // deduplica y la invalida ante cualquier mutación de atributo). Se resuelve
+  // a través de apiExport para que los tests que mockean api/products sin
+  // esta exportación sigan renderizando.
+  const useProductAttributesHook = apiExport("useProductAttributes");
+  const { data: attributes = [] } = useProductAttributesHook
+    ? useProductAttributesHook(product.id)
+    : { data: [] };
   const stateCounts = [
     { state: "available", count: product.available_units, label: "Disponible", key: "Disp" },
     { state: "apartado", count: product.quantity - product.available_units, label: "Apartado", key: "Apar" },
@@ -98,8 +98,21 @@ function ProductRow({
   }
 
   return (
+    <>
     <tr>
-      <td data-label="Producto" style={{ fontWeight: "var(--font-weight-medium)" }}>{product.name}</td>
+      <td data-label="Producto" style={{ fontWeight: "var(--font-weight-medium)" }}>
+        {product.name}
+        {attributes.length > 0 && (
+          <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-secondary)", marginTop: "var(--space-1)" }}>
+            {attributes.map((a, i) => (
+              <React.Fragment key={`${a.attribute_name}-${i}`}>
+                {i > 0 && <span> · </span>}
+                {a.attribute_name}: {a.attribute_value}
+              </React.Fragment>
+            ))}
+          </div>
+        )}
+      </td>
       <td data-label="Unidades">
         <div className="chips" style={{ gap: "var(--space-2)", flexWrap: "wrap" }}>
           {stateCounts.map((chip) => (
@@ -141,104 +154,8 @@ function ProductRow({
       </td>
     </tr>
 
-    {/* Variant rows: stock, attributes and on-the-fly alert badge (R9, R11). */}
-    {variants.length > 0 && (
-      <tr key={`${product.id}-variants`}>
-        <td colSpan={5} style={{ padding: 0 }}>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "var(--space-2)",
-              padding: `var(--space-2) var(--space-4)`,
-              background: "var(--color-bg)",
-              borderRadius: "var(--radius-md)",
-              marginTop: "var(--space-1)",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                gap: "var(--space-3)",
-                alignItems: "center",
-                fontSize: "var(--text-xs)",
-                color: "var(--color-text-secondary)",
-              }}
-            >
-              <strong style={{ color: "var(--color-text)" }}>Variantes</strong>
-              <span>stock · atributos · alerta</span>
-            </div>
-            {variants.map((variant) => {
-              const alert = variantAlert(variant);
-              return (
-                <div
-                  key={variant.id}
-                  style={{
-                    display: "flex",
-                    gap: "var(--space-2)",
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                    fontSize: "var(--text-sm)",
-                  }}
-                >
-                  <span style={{ minWidth: "110px" }}>{variant.name}</span>
-                  {variant.sku && (
-                    <span
-                      style={{
-                        fontSize: "var(--text-xs)",
-                        color: "var(--color-text-secondary)",
-                      }}
-                    >
-                      {variant.sku}
-                    </span>
-                  )}
-                  <span style={{ fontSize: "var(--text-xs)", color: "var(--color-text-secondary)" }}>
-                    {variant.attributes
-                      .map((a) => `${a.attribute_name}: ${a.attribute_value}`)
-                      .join(" · ") || "—"}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: "var(--text-sm)",
-                      fontWeight: "var(--font-weight-medium)",
-                    }}
-                  >
-                    Stock {variant.stock}
-                  </span>
-                  {alert ? (
-                    <Badge
-                      variant={alert === "critical" ? "danger" : "warning"}
-                      size="sm"
-                      title={alert === "critical" ? "Stock crítico" : "Stock mínimo"}
-                    >
-                      {alert === "critical" ? "Crítico" : "Mínimo"}
-                    </Badge>
-                  ) : null}
-                  <Button
-                    type="button"
-                    variant={variant.active ? "secondary" : "primary"}
-                    size="sm"
-                    disabled={togglingVariant === variant.id}
-                    onClick={() => handleVariantToggle(variant)}
-                    aria-label={
-                      variant.active
-                        ? `Desactivar ${variant.name}`
-                        : `Activar ${variant.name}`
-                    }
-                  >
-                    {togglingVariant === variant.id
-                      ? "..."
-                      : variant.active
-                        ? "Activo"
-                        : "Inactivo"}
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
-        </td>
-      </tr>
-    ))}
+
+    </>
   );
 }
 
@@ -246,9 +163,6 @@ export default function InventoryList() {
   const { data: configData } = useConfig();
   const config = configData ?? { currencySymbol: "$", currencyLocale: "es-AR" };
   const { create, update, remove } = useProductMutations();
-  const { setActive: setVariantActive } = useVariantMutations
-    ? useVariantMutations()
-    : { setActive: async () => {} };
   const navigate = useNavigate();
 
   const [searchInput, setSearchInput] = useState("");
@@ -279,15 +193,6 @@ export default function InventoryList() {
       await remove(product.id);
     } catch (err) {
       setBannerError(err instanceof Error ? err.message : "Ocurrió un error inesperado.");
-    }
-  }
-
-  async function handleVariantToggle(productId: string, variantId: string, active: boolean) {
-    setBannerError(null);
-    try {
-      await setVariantActive(productId, variantId, active);
-    } catch (err) {
-      setBannerError(err instanceof Error ? err.message : "No se pudo actualizar la variante.");
     }
   }
 
@@ -393,7 +298,6 @@ export default function InventoryList() {
                     product={product}
                     onEdit={openEdit}
                     onDelete={handleDelete}
-                    onVariantToggle={handleVariantToggle}
                     config={config}
                     navigate={navigate}
                   />

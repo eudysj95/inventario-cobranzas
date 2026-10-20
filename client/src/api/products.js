@@ -6,16 +6,13 @@
 //   PATCH  /api/products/:id            edit; quantity is a SIGNED stock adjustment
 //   DELETE /api/products/:id            409-guarded delete
 //
-// Variant routes (Fase 1 — variantes de producto):
-//   POST   /api/products/:id/variants           create {name, sku?, stock?,
-//                                                 min_stock?, critical_stock?,
-//                                                 position?, attributes: []} -> 201
-//   GET    /api/products/:id/variants           list sorted by position with attributes
-//   PATCH  /api/products/:id/variants/:vid/stock  { delta } signed, stock >= 0
-//   PATCH  /api/products/:id/variants/:vid/active { active }
-// Every variant mutation invalidates the ['products'] query cache so the
-// product list and detail views (including derived parent stock) refetch
-// (R10: parent cache invalidation).
+// Attribute routes (atributos personalizados clave-valor por producto):
+//   GET    /api/products/:id/attributes              list attributes ordered by position
+//   POST   /api/products/:id/attributes              create {attribute_name, attribute_value, position?}
+//   PATCH  /api/products/:id/attributes/:attrId      update {attribute_name?, attribute_value?, position?}
+//   DELETE /api/products/:id/attributes/:attrId      delete attribute
+// Every attribute mutation invalidates the ['products'] query cache so the
+// product list and detail views refetch.
 //
 // PATCH DELTA CONTRACT (slice-3 deviation, honored here): the server ADDS the
 // `quantity` value to current stock (positive restocks, negative removes units,
@@ -75,53 +72,6 @@ export async function deleteProduct(id) {
   return apiRequest(`/api/products/${id}`, { method: 'DELETE' });
 }
 
-/** GET /api/products/:id/variants → array of variants with their attributes. */
-export async function getVariants(productId, { signal } = {}) {
-  const data = await apiRequest(`/api/products/${productId}/variants`, { signal });
-  return data.variants ?? [];
-}
-
-/** POST /api/products/:id/variants → { variant }. */
-export async function createVariant(productId, input) {
-  const data = await apiRequest(`/api/products/${productId}/variants`, {
-    method: 'POST',
-    body: input,
-  });
-  return data.variant;
-}
-
-/** PATCH /api/products/:id/variants/:variantId/stock → { variant }. */
-export async function updateVariantStock(productId, variantId, delta) {
-  const data = await apiRequest(
-    `/api/products/${productId}/variants/${variantId}/stock`,
-    { method: 'PATCH', body: { delta } }
-  );
-  return data.variant;
-}
-
-/** PATCH /api/products/:id/variants/:variantId/active → { ok: true }. */
-export async function setVariantActive(productId, variantId, active) {
-  return apiRequest(
-    `/api/products/${productId}/variants/${variantId}/active`,
-    { method: 'PATCH', body: { active } }
-  );
-}
-
-/** Signed delta the variant stock endpoint expects: target − current. */
-export function variantStockDelta(currentStock, targetStock) {
-  return targetStock - currentStock;
-}
-
-/**
- * Alert badge for a variant, evaluated on the fly (spec R9 — no stored state):
- * stock <= critical_stock → 'critical'; stock <= min_stock → 'min'; else null.
- */
-export function variantAlert(variant) {
-  if (variant.stock <= variant.critical_stock) return 'critical';
-  if (variant.stock <= variant.min_stock) return 'min';
-  return null;
-}
-
 /** List query: keyed by the filters object so search/state changes refetch. */
 export function useProducts(filters) {
   return useQuery({
@@ -162,37 +112,69 @@ export function useProductMutations() {
   };
 }
 
-/** Variants of one product. Keyed by product id; disabled until an id exists. */
-export function useVariants(productId) {
+/** GET /api/products/:id/attributes → array of attributes ordered by position. */
+export async function getProductAttributes(productId, { signal } = {}) {
+  const data = await apiRequest(`/api/products/${productId}/attributes`, { signal });
+  return data.attributes ?? [];
+}
+
+/** POST /api/products/:id/attributes → { attribute }. */
+export async function createProductAttribute(productId, input) {
+  const data = await apiRequest(`/api/products/${productId}/attributes`, {
+    method: 'POST',
+    body: input,
+  });
+  return data.attribute;
+}
+
+/** PATCH /api/products/:id/attributes/:attrId → { attribute }. */
+export async function updateProductAttribute(productId, attrId, patch) {
+  const data = await apiRequest(
+    `/api/products/${productId}/attributes/${attrId}`,
+    { method: 'PATCH', body: patch }
+  );
+  return data.attribute;
+}
+
+/** DELETE /api/products/:id/attributes/:attrId → { ok: true }. */
+export async function deleteProductAttribute(productId, attrId) {
+  return apiRequest(`/api/products/${productId}/attributes/${attrId}`, {
+    method: 'DELETE',
+  });
+}
+
+/**
+ * Attributes of one product. Keyed by product id; disabled until an id exists.
+ */
+export function useProductAttributes(productId) {
   return useQuery({
-    queryKey: [...PRODUCTS_KEY, 'variants', productId],
-    queryFn: ({ signal }) => getVariants(productId, { signal }),
+    queryKey: [...PRODUCTS_KEY, 'attributes', productId],
+    queryFn: ({ signal }) => getProductAttributes(productId, { signal }),
     enabled: Boolean(productId),
   });
 }
 
 /**
- * Variant mutations. Every success invalidates every ['products']-prefixed
- * query (list, detail and the variants of the affected product) so the
- * parent's derived stock and UI stay consistent (R10).
+ * Attribute mutations. Every success invalidates every ['products']-prefixed
+ * query (list and detail) so the product views stay consistent.
  */
-export function useVariantMutations() {
+export function useProductAttributeMutations() {
   const queryClient = useQueryClient();
   const invalidate = () => queryClient.invalidateQueries({ queryKey: PRODUCTS_KEY });
 
   return {
     async create(productId, input) {
-      const variant = await createVariant(productId, input);
+      const attribute = await createProductAttribute(productId, input);
       await invalidate();
-      return variant;
+      return attribute;
     },
-    async updateStock(productId, variantId, delta) {
-      const variant = await updateVariantStock(productId, variantId, delta);
+    async update(productId, attrId, patch) {
+      const attribute = await updateProductAttribute(productId, attrId, patch);
       await invalidate();
-      return variant;
+      return attribute;
     },
-    async setActive(productId, variantId, active) {
-      await setVariantActive(productId, variantId, active);
+    async remove(productId, attrId) {
+      await deleteProductAttribute(productId, attrId);
       await invalidate();
     },
   };

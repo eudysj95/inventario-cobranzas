@@ -15,24 +15,14 @@ import { toDateString } from '../lib/dates.js';
  *                                     never allowed to drive quantity below 0
  *   DELETE /api/products/:id           only when quantity = 0 and no open records (TXN)
  *
- * Variant sub-routes (Fase 1 — variantes de producto):
- *   POST   /api/products/:id/variants
- *          Body: { name, sku?, stock?, min_stock?, critical_stock?, position?,
- *                  attributes: [{ name, value, position? }] }
- *          Creates the variant and its attributes in one TXN; answers 201 (R1, R5).
- *   GET    /api/products/:id/variants  lists variants sorted by position with
- *          their attributes (R2).
- *   PATCH  /api/products/:id/variants/:variantId/stock
- *          Body: { delta } (signed integer). Rejected when stock would drop
- *          below 0; stock is left unchanged (R3).
- *   PATCH  /api/products/:id/variants/:variantId/active
- *          Body: { active }. Inactive variants are excluded from the parent
- *          SUM and the UI (R4).
+ * Attribute sub-routes (atributos personalizados clave-valor por producto):
+ *   GET    /api/products/:id/attributes   lista atributos ordenados por position
+ *   POST   /api/products/:id/attributes   crea {attribute_name, attribute_value, position?}
+ *   PATCH  /api/products/:id/attributes/:attrId   actualiza {attribute_name?, attribute_value?, position?}
+ *   DELETE /api/products/:id/attributes/:attrId   elimina atributo
  *
- * All variant mutations run inside withTransaction, so concurrent mutations on
- * the same variant are all-or-nothing (R12). The parent's general stock is
- * derived at query time in product_states (SUM of active variant stock,
- * fallback to products.quantity — R6, R7).
+ * Las mutaciones de atributos invalidan la caché de productos del padre para
+ * que el listado y el detalle se refresquen.
  *
  * All routes require an authenticated session (spec: every business endpoint
  * answers 401 without one). The pool is injected, same pattern as auth/health.
@@ -319,156 +309,14 @@ export default function productsRouter(pool) {
   });
 
   // ---------------------------------------------------------------------------
-  // Variant sub-routes mounted under /:id/variants (product_id = req.params.id).
+  // Attribute sub-routes mounted under /:id/attributes (product_id = req.params.id).
   // ---------------------------------------------------------------------------
-  // mergeParams: true para que req.params.id (producto padre) sea visible
-  // dentro de este sub-router montado bajo /:id/variants.
-  const variantRoutes = Router({ mergeParams: true });
+  // mergeParams: true para que req.params.id (producto) sea visible dentro de
+  // este sub-router montado bajo /:id/attributes.
+  const attributeRoutes = Router({ mergeParams: true });
 
-  /** Shape of a variant row + its attributes, as returned by the API. */
-  function toVariantRow(row, attributes = []) {
-    return {
-      ...row,
-      attributes: attributes.map((a) => ({
-        id: a.id,
-        variant_id: a.variant_id,
-        attribute_name: a.attribute_name,
-        attribute_value: a.attribute_value,
-        position: a.position,
-      })),
-    };
-  }
-
-  /** Validates and normalizes the variant create body. Returns { error } or
-   *  the normalized input. Attribute input accepts { name, value } (spec) as
-   *  well as { attribute_name, attribute_value }. */
-  function normalizeVariantInput(body) {
-    const {
-      name,
-      sku,
-      stock = 0,
-      min_stock = 0,
-      critical_stock = 0,
-      position = 0,
-      attributes = [],
-    } = body ?? {};
-
-    if (typeof name !== 'string' || name.trim() === '') {
-      return { error: 'Variant name is required' };
-    }
-    if (sku !== undefined && sku !== null && typeof sku !== 'string') {
-      return { error: 'SKU must be a string' };
-    }
-    if (!Number.isInteger(stock) || stock < 0) {
-      return { error: 'Stock must be a non-negative integer' };
-    }
-    if (!Number.isInteger(min_stock) || min_stock < 0) {
-      return { error: 'min_stock must be a non-negative integer' };
-    }
-    if (!Number.isInteger(critical_stock) || critical_stock < 0) {
-      return { error: 'critical_stock must be a non-negative integer' };
-    }
-    if (!Number.isInteger(position)) {
-      return { error: 'Position must be an integer' };
-    }
-    if (!Array.isArray(attributes)) {
-      return { error: 'Attributes must be an array' };
-    }
-
-    const normalized = [];
-    for (const [index, attr] of attributes.entries()) {
-      const attributeName = String(attr?.attribute_name ?? attr?.name ?? '').trim();
-      const attributeValue = String(attr?.attribute_value ?? attr?.value ?? '').trim();
-      if (attributeName === '' || attributeValue === '') {
-        return { error: 'Attribute name and value are required' };
-      }
-      normalized.push({
-        attribute_name: attributeName,
-        attribute_value: attributeValue,
-        position: Number.isInteger(attr?.position) ? attr.position : index,
-      });
-    }
-
-    return {
-      name: name.trim(),
-      sku: sku ?? null,
-      stock,
-      min_stock,
-      critical_stock,
-      position,
-      attributes: normalized,
-    };
-  }
-
-  /** True when the product exists (guarded look-up before any variant write). */
-  async function productExists(client, productId) {
-    const { rows } = await client.query('SELECT 1 FROM products WHERE id = $1', [
-      productId,
-    ]);
-    return rows.length > 0;
-  }
-
-  // POST /api/products/:id/variants — create variant + attributes in one TXN (R1, R5).
-  variantRoutes.post('/', async (req, res) => {
-    if (!isUuid(req.params.id)) return notFound(res, 'Product not found');
-    const input = normalizeVariantInput(req.body);
-    if (input.error) return badRequest(res, input.error);
-
-    let result;
-    try {
-      result = await withTransaction(pool, async (client) => {
-        if (!(await productExists(client, req.params.id))) {
-          return { status: 'not-found' };
-        }
-        const { rows } = await client.query(
-          `INSERT INTO product_variants
-           (product_id, name, sku, stock, min_stock, critical_stock, active, position)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-           RETURNING id, product_id, name, sku, stock, min_stock, critical_stock,
-                     active, position, created_at, updated_at`,
-          [
-            req.params.id,
-            input.name,
-            input.sku,
-            input.stock,
-            input.min_stock,
-            input.critical_stock,
-            true,
-            input.position,
-          ]
-        );
-        const variant = rows[0];
-        for (const attr of input.attributes) {
-          await client.query(
-            `INSERT INTO variant_attributes
-             (variant_id, attribute_name, attribute_value, position)
-             VALUES ($1, $2, $3, $4)`,
-            [variant.id, attr.attribute_name, attr.attribute_value, attr.position]
-          );
-        }
-        const { rows: attributes } = await client.query(
-          `SELECT id, variant_id, attribute_name, attribute_value, position
-           FROM variant_attributes
-           WHERE variant_id = $1
-           ORDER BY position ASC, id ASC`,
-          [variant.id]
-        );
-        return { status: 'ok', variant: toVariantRow(variant, attributes) };
-      });
-    } catch (err) {
-      // Duplicate SKU (unique index) -> clean 400 instead of a 500.
-      if (err.code === '23505' && err.constraint === 'product_variants_sku_key') {
-        return badRequest(res, 'SKU already exists');
-      }
-      throw err;
-    }
-
-    if (result.status === 'not-found') return notFound(res, 'Product not found');
-    return res.status(201).json({ variant: result.variant });
-  });
-
-  // GET /api/products/:id/variants — sorted by position, with attributes (R2).
-  variantRoutes.get('/', async (req, res) => {
+  // GET /api/products/:id/attributes — lista de atributos ordenada por position.
+  attributeRoutes.get('/', async (req, res) => {
     if (!isUuid(req.params.id)) return notFound(res, 'Product not found');
 
     const { rows: productRows } = await pool.query(
@@ -477,99 +325,110 @@ export default function productsRouter(pool) {
     );
     if (productRows.length === 0) return notFound(res, 'Product not found');
 
-    const { rows: variants } = await pool.query(
-      `SELECT id, product_id, name, sku, stock, min_stock, critical_stock,
-              active, position, created_at, updated_at
-       FROM product_variants
+    const { rows: attributes } = await pool.query(
+      `SELECT id, product_id, attribute_name, attribute_value, position,
+              created_at, updated_at
+       FROM product_attributes
        WHERE product_id = $1
-       ORDER BY position ASC, name ASC, id ASC`,
+       ORDER BY position ASC, id ASC`,
       [req.params.id]
     );
 
-    const attributesByVariant = {};
-    if (variants.length > 0) {
-      const ids = variants.map((v) => v.id);
-      const { rows: attributes } = await pool.query(
-        `SELECT id, variant_id, attribute_name, attribute_value, position
-         FROM variant_attributes
-         WHERE variant_id = ANY($1)
-         ORDER BY variant_id ASC, position ASC, id ASC`,
-        [ids]
-      );
-      for (const attr of attributes) {
-        (attributesByVariant[attr.variant_id] ??= []).push(attr);
+    return res.status(200).json({ attributes });
+  });
+
+  // POST /api/products/:id/attributes — crear atributo {attribute_name, attribute_value, position?}.
+  attributeRoutes.post('/', async (req, res) => {
+    if (!isUuid(req.params.id)) return notFound(res, 'Product not found');
+    const { attribute_name, attribute_value, position = 0 } = req.body ?? {};
+
+    if (typeof attribute_name !== 'string' || attribute_name.trim() === '') {
+      return badRequest(res, 'Attribute name is required');
+    }
+    if (typeof attribute_value !== 'string' || attribute_value.trim() === '') {
+      return badRequest(res, 'Attribute value is required');
+    }
+    if (!Number.isInteger(position)) {
+      return badRequest(res, 'Position must be an integer');
+    }
+
+    const { rows } = await pool.query(
+      `INSERT INTO product_attributes
+       (product_id, attribute_name, attribute_value, position)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, product_id, attribute_name, attribute_value, position,
+                 created_at, updated_at`,
+      [req.params.id, attribute_name.trim(), attribute_value.trim(), position]
+    );
+
+    return res.status(201).json({ attribute: rows[0] });
+  });
+
+  // PATCH /api/products/:id/attributes/:attrId — actualizar {attribute_name?, attribute_value?, position?}.
+  attributeRoutes.patch('/:attrId', async (req, res) => {
+    if (!isUuid(req.params.id)) return notFound(res, 'Product not found');
+    if (!isUuid(req.params.attrId)) return notFound(res, 'Attribute not found');
+    const { attribute_name, attribute_value, position } = req.body ?? {};
+
+    const sets = [];
+    const params = [];
+    if (attribute_name !== undefined) {
+      if (typeof attribute_name !== 'string' || attribute_name.trim() === '') {
+        return badRequest(res, 'Attribute name must be a non-empty string');
       }
+      params.push(attribute_name.trim());
+      sets.push(`attribute_name = $${params.length}`);
     }
+    if (attribute_value !== undefined) {
+      if (typeof attribute_value !== 'string' || attribute_value.trim() === '') {
+        return badRequest(res, 'Attribute value must be a non-empty string');
+      }
+      params.push(attribute_value.trim());
+      sets.push(`attribute_value = $${params.length}`);
+    }
+    if (position !== undefined) {
+      if (!Number.isInteger(position)) {
+        return badRequest(res, 'Position must be an integer');
+      }
+      params.push(position);
+      sets.push(`position = $${params.length}`);
+    }
+    if (sets.length === 0) {
+      return badRequest(res, 'No fields to update');
+    }
+    params.push(req.params.attrId);
+    params.push(req.params.id);
 
-    return res.status(200).json({
-      variants: variants.map((v) => toVariantRow(v, attributesByVariant[v.id] ?? [])),
-    });
+    const { rows } = await pool.query(
+      `UPDATE product_attributes
+       SET ${sets.join(', ')}, updated_at = now()
+       WHERE id = $${params.length - 1} AND product_id = $${params.length}
+       RETURNING id, product_id, attribute_name, attribute_value, position,
+                 created_at, updated_at`,
+      params
+    );
+    if (rows.length === 0) return notFound(res, 'Attribute not found');
+
+    return res.status(200).json({ attribute: rows[0] });
   });
 
-  // PATCH /api/products/:id/variants/:variantId/stock — signed delta, >= 0 enforced (R3).
-  variantRoutes.patch('/:variantId/stock', async (req, res) => {
+  // DELETE /api/products/:id/attributes/:attrId — eliminar atributo.
+  attributeRoutes.delete('/:attrId', async (req, res) => {
     if (!isUuid(req.params.id)) return notFound(res, 'Product not found');
-    if (!isUuid(req.params.variantId)) return notFound(res, 'Variant not found');
-    const { delta } = req.body ?? {};
-    if (!Number.isInteger(delta)) {
-      return badRequest(res, 'Delta must be an integer');
-    }
+    if (!isUuid(req.params.attrId)) return notFound(res, 'Attribute not found');
 
-    const result = await withTransaction(pool, async (client) => {
-      const { rows } = await client.query(
-        `UPDATE product_variants
-         SET stock = stock + $1, updated_at = now()
-         WHERE id = $2 AND stock + $1 >= 0
-         RETURNING stock`,
-        [delta, req.params.variantId]
-      );
-      if (rows.length === 0) return { status: 'missing-or-blocked' };
-      return { status: 'ok', stock: rows[0].stock };
-    });
+    const { rows } = await pool.query(
+      `DELETE FROM product_attributes
+       WHERE id = $1 AND product_id = $2
+       RETURNING id`,
+      [req.params.attrId, req.params.id]
+    );
+    if (rows.length === 0) return notFound(res, 'Attribute not found');
 
-    if (result.status === 'missing-or-blocked') {
-      const check = await pool.query(
-        `SELECT 1 FROM product_variants
-         WHERE id = $1 AND product_id = $2`,
-        [req.params.variantId, req.params.id]
-      );
-      if (check.rows.length === 0) return notFound(res, 'Variant not found');
-      return badRequest(
-        res,
-        'Insufficient stock — variant stock cannot go below 0'
-      );
-    }
-
-    return res.status(200).json({
-      variant: { id: req.params.variantId, stock: result.stock },
-    });
-  });
-
-  // PATCH /api/products/:id/variants/:variantId/active — exclude from SUM/UI (R4).
-  variantRoutes.patch('/:variantId/active', async (req, res) => {
-    if (!isUuid(req.params.id)) return notFound(res, 'Product not found');
-    if (!isUuid(req.params.variantId)) return notFound(res, 'Variant not found');
-    const { active } = req.body ?? {};
-    if (typeof active !== 'boolean') {
-      return badRequest(res, 'Active must be a boolean');
-    }
-
-    const result = await withTransaction(pool, async (client) => {
-      const { rows } = await client.query(
-        `UPDATE product_variants SET active = $1, updated_at = now()
-         WHERE id = $2
-         RETURNING id`,
-        [active, req.params.variantId]
-      );
-      if (rows.length === 0) return { status: 'not-found' };
-      return { status: 'ok' };
-    });
-
-    if (result.status === 'not-found') return notFound(res, 'Variant not found');
     return res.status(200).json({ ok: true });
   });
 
-  router.use('/:id/variants', variantRoutes);
+  router.use('/:id/attributes', attributeRoutes);
 
   return router;
 }
