@@ -77,6 +77,10 @@ async function main() {
     [deleteIds]
   );
   await pool.query('DELETE FROM apartados WHERE product_id = ANY($1::uuid[])', [deleteIds]);
+  await pool.query(
+    'DELETE FROM payment_allocations WHERE debt_id IN (SELECT id FROM customer_debts WHERE product_id = ANY($1::uuid[]))',
+    [deleteIds]
+  );
   await pool.query('DELETE FROM customer_debts WHERE product_id = ANY($1::uuid[])', [deleteIds]);
   await pool.query('DELETE FROM cash_sales WHERE product_id = ANY($1::uuid[])', [deleteIds]);
 
