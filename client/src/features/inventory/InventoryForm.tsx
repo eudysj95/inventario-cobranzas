@@ -46,7 +46,7 @@ export default function InventoryForm({ mode, product: initialProduct, onSubmit 
   const productId = params.id || initialProduct?.id;
 
   const { create: createProductM, update: updateProductM } = useProductMutations();
-  const { createAttribute, updateAttribute, removeAttribute } = useProductAttributeMutations();
+  const { create: createAttributeM, update: updateAttributeM, remove: removeAttributeM } = useProductAttributeMutations();
   const { data: attributesData = [], isPending: attributesPending } = productId
     ? useProductAttributes(productId)
     : { data: [], isPending: false };
@@ -190,7 +190,7 @@ export default function InventoryForm({ mode, product: initialProduct, onSubmit 
     // Borra atributos del servidor que ya no están en el formulario.
     for (const attr of attributesData) {
       if (attr.id && !currentIds.has(attr.id)) {
-        await removeAttribute(productId, attr.id);
+        await removeAttributeM(productId, attr.id);
       }
     }
     // Crea o actualiza cada fila del formulario.
@@ -204,9 +204,9 @@ export default function InventoryForm({ mode, product: initialProduct, onSubmit 
         position: index,
       };
       if (attr.id) {
-        await updateAttribute(productId, attr.id, payload);
+        await updateAttributeM(productId, attr.id, payload);
       } else {
-        await createAttribute(productId, payload);
+        await createAttributeM(productId, payload);
       }
     }
   }
