@@ -10,9 +10,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__dirname);
+const __dirname = path.dirname(__filename);
 
-dotenv.config({ path: path.join(__dirname, '.env') });
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 const KEEP_NAMES = PRODUCT_NAMES.map((p) => p.name);
 
@@ -61,7 +61,7 @@ async function main() {
     return;
   }
 
-  console.info(`[cleanup] Se borrarán ${toDelete} producto(s) viejo(s):`);
+  console.info(`[cleanup] Se borrarán ${toDelete.length} producto(s) viejo(s):`);
   toDelete.forEach((r) => console.info(`  - ${r.name} (id: ${r.id}, precio: ${r.price}, stock: ${r.quantity})`));
 
   const deleteIds = toDelete.map((r) => r.id);
