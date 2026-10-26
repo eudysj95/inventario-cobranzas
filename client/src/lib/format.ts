@@ -8,6 +8,11 @@
 export interface CurrencyConfig {
   currencySymbol: string;
   currencyLocale: string;
+  // Código ISO 4217 de la moneda de la instancia (Fase 2 multimoneda).
+  // Siempre 'USD' por diseño (moneda base); se lleva en el config para que
+  // la UI sepa qué moneda está renderizando sin hardcodearla.
+  currencyCode?: string;
+  baseCurrency?: string;
 }
 
 // Format a number as money: locale number grouping + symbol prefix.

@@ -6,6 +6,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { formatCurrency, formatDate } from '../../lib/format.js';
+import { useConfig, DEFAULT_CONFIG } from '../../api/config.js';
 import { getCashSale } from '../../api/cash-sales.js';
 
 export default function CashSaleDetail({ saleId }) {
@@ -16,6 +17,11 @@ export default function CashSaleDetail({ saleId }) {
   });
 
   const navigate = useNavigate();
+
+  // Config de instancia (moneda base USD). Reemplaza los literales '$'/'es-AR'
+  // que antes se hardcodeaban aquí (Fase 2 multimoneda).
+  const { data: configData } = useConfig();
+  const config = configData ?? DEFAULT_CONFIG;
 
   if (isPending) return <p className="loading">Cargando detalle de la venta…</p>;
   if (isError) return <p className="alert alert-error" role="alert">No se pudo cargar el detalle de la venta.</p>;
@@ -33,7 +39,7 @@ export default function CashSaleDetail({ saleId }) {
         <div className="mb-4" style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
           <p><strong>Venta:</strong> {sale.id}</p>
           <p><strong>Cliente:</strong> {sale.customer_name}</p>
-          <p><strong>Fecha:</strong> {formatDate(sale.created_at, { currencySymbol: '$', currencyLocale: 'es-AR' })}</p>
+          <p><strong>Fecha:</strong> {formatDate(sale.created_at, config)}</p>
         </div>
 
         {sale.lines.length === 0 ? (
@@ -54,16 +60,16 @@ export default function CashSaleDetail({ saleId }) {
                   <tr key={line.id}>
                     <td>{line.product_name}</td>
                     <td>{line.units}</td>
-                    <td>{formatCurrency(line.amount, { currencySymbol: '$', currencyLocale: 'es-AR' })}</td>
-                    <td>{formatCurrency(line.amount, { currencySymbol: '$', currencyLocale: 'es-AR' })}</td>
+                    <td>{formatCurrency(line.amount, config)}</td>
+                    <td>{formatCurrency(line.amount, config)}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr>
                   <td colSpan={2} style={{ fontWeight: 'var(--font-weight-semibold)' }}>Total general</td>
-                  <td style={{ fontWeight: 'var(--font-weight-semibold)' }}>{formatCurrency(totalGeneral, { currencySymbol: '$', currencyLocale: 'es-AR' })}</td>
-                  <td colSpan={2} style={{ fontWeight: 'var(--font-weight-semibold)' }}>{formatCurrency(totalGeneral, { currencySymbol: '$', currencyLocale: 'es-AR' })}</td>
+                  <td style={{ fontWeight: 'var(--font-weight-semibold)' }}>{formatCurrency(totalGeneral, config)}</td>
+                  <td colSpan={2} style={{ fontWeight: 'var(--font-weight-semibold)' }}>{formatCurrency(totalGeneral, config)}</td>
                 </tr>
               </tfoot>
             </table>

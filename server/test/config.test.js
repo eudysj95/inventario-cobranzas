@@ -43,8 +43,11 @@ test('GET /api/config answers 200 without an auth cookie and mirrors the env val
     businessName: 'Mi Tienda de Prueba',
     currencySymbol: 'USD',
     currencyLocale: 'en-US',
+    currencyCode: 'USD',
+    baseCurrency: 'USD',
     whatsappNumber: '+54 9 11 5555-1234',
   });
+  assert.equal(res.body.baseCurrency, 'USD', 'baseCurrency siempre es USD');
 });
 
 test('GET /api/config omits whatsappNumber when the env var is unset', async () => {
@@ -58,6 +61,8 @@ test('GET /api/config omits whatsappNumber when the env var is unset', async () 
     businessName: 'Sin WhatsApp',
     currencySymbol: '$',
     currencyLocale: 'es-AR',
+    currencyCode: 'USD',
+    baseCurrency: 'USD',
   });
   assert.ok(!('whatsappNumber' in res.body), 'optional key is omitted');
 });
@@ -69,9 +74,11 @@ test('GET /api/config falls back to documented defaults when env vars are unset'
 
   assert.equal(res.status, 200);
   assert.deepEqual(res.body, {
-    businessName: 'Mi Negocio',
+    businessName: 'Nexo',
     currencySymbol: '$',
     currencyLocale: 'es-AR',
+    currencyCode: 'USD',
+    baseCurrency: 'USD',
   });
 });
 
@@ -87,7 +94,9 @@ test('GET /api/config leaks no secrets or business data', async () => {
   // reads server env only and never touches the database, so products,
   // customers, debts or any other business data cannot appear.
   assert.deepEqual(Object.keys(res.body).sort(), [
+    'baseCurrency',
     'businessName',
+    'currencyCode',
     'currencyLocale',
     'currencySymbol',
     'whatsappNumber',

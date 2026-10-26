@@ -17,6 +17,9 @@ export const DEFAULT_CONFIG = {
   businessName: 'Nexo',
   currencySymbol: '$',
   currencyLocale: 'es-AR',
+  // Fase 2 multimoneda: la moneda de la instancia es siempre USD (base).
+  currencyCode: 'USD',
+  baseCurrency: 'USD',
 };
 
 // Same-origin fetch of the public config endpoint. Throws on failure so the
@@ -33,6 +36,9 @@ export async function getConfig() {
     businessName: data.businessName ?? DEFAULT_CONFIG.businessName,
     currencySymbol: data.currencySymbol ?? DEFAULT_CONFIG.currencySymbol,
     currencyLocale: data.currencyLocale ?? DEFAULT_CONFIG.currencyLocale,
+    // Fase 2 multimoneda: moneda de la instancia (siempre 'USD').
+    currencyCode: data.currencyCode ?? DEFAULT_CONFIG.currencyCode,
+    baseCurrency: data.baseCurrency ?? DEFAULT_CONFIG.baseCurrency,
     // Optional — undefined when the instance has no WhatsApp number.
     whatsappNumber: data.whatsappNumber,
   };

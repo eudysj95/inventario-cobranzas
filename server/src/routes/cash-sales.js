@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { requireAuth } from '../auth.js';
 import { badRequest, isUuid, notFound } from '../http.js';
 import { withTransaction } from '../services/txn.js';
+import { getExchangeRate } from '../services/bcv.js';
 
 /**
  * Cash-sales routes (task 4.4):
@@ -128,7 +129,7 @@ export default function cashSalesRouter(pool) {
   router.use(requireAuth);
 
   router.post('/', async (req, res) => {
-    const { customerId, lines } = req.body ?? {};
+    const { customerId, lines, currency_code } = req.body ?? {};
 
     if (typeof customerId !== 'string' || !isUuid(customerId)) {
       return badRequest(res, 'customerId must be a valid UUID');
@@ -164,6 +165,18 @@ export default function cashSalesRouter(pool) {
 
     // Grouping key generated server-side so every line of this sale shares it.
     const saleId = randomUUID();
+
+    // Moneda y tasa de cambio (Fase 2 multimoneda). USD es la moneda base:
+    // exchange_rate = 1 y amount_converted = amount. VES consulta el BCV.
+    const currencyCode = currency_code === 'VES' ? 'VES' : 'USD';
+    let exchangeRate = 1;
+    if (currencyCode !== 'USD') {
+      try {
+        exchangeRate = await getExchangeRate(currencyCode, 'VES');
+      } catch {
+        return res.status(502).json({ error: 'Tipo de cambio no disponible' });
+      }
+    }
 
     let result;
     try {
@@ -206,14 +219,18 @@ export default function cashSalesRouter(pool) {
 
           await client.query(
             `INSERT INTO cash_sales
-               (customer_id, product_id, sale_id, units, amount, created_at)
-            VALUES ($1, $2, $3, $4, $5, now())`,
+               (customer_id, product_id, sale_id, units, amount,
+                currency_code, exchange_rate, amount_converted, created_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now())`,
             [
               customerId,
               line.productId,
               saleId,
               line.units,
               amount.toFixed(2),
+              currencyCode,
+              exchangeRate.toFixed(6),
+              roundMoney(amount * exchangeRate).toFixed(2),
             ]
           );
         }

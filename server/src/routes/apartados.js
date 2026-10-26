@@ -9,6 +9,7 @@ import {
 } from '../http.js';
 import { withTransaction } from '../services/txn.js';
 import { toDateString } from '../lib/dates.js';
+import { getExchangeRate } from '../services/bcv.js';
 
 /**
  * Apartados routes (tasks 4.1 + 4.2):
@@ -182,7 +183,7 @@ export default function apartadosRouter(pool) {
 
   router.post('/:id/pay', async (req, res) => {
     if (!isUuid(req.params.id)) return notFound(res, 'Apartado not found');
-    const { amount, note } = req.body ?? {};
+    const { amount, note, currency_code } = req.body ?? {};
 
     if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
       return badRequest(res, 'amount must be a positive number');
@@ -194,6 +195,18 @@ export default function apartadosRouter(pool) {
     const amountCents = Math.round(amount * 100);
     if (amountCents <= 0) {
       return badRequest(res, 'amount must be a positive number');
+    }
+
+    // Moneda y tasa de cambio (Fase 2 multimoneda). USD es la moneda base:
+    // exchange_rate = 1 y amount_converted = amount. VES consulta el BCV.
+    const currencyCode = currency_code === 'VES' ? 'VES' : 'USD';
+    let exchangeRate = 1;
+    if (currencyCode !== 'USD') {
+      try {
+        exchangeRate = await getExchangeRate(currencyCode, 'VES');
+      } catch {
+        return res.status(502).json({ error: 'Tipo de cambio no disponible' });
+      }
     }
 
     const result = await withTransaction(pool, async (client) => {
@@ -219,9 +232,17 @@ export default function apartadosRouter(pool) {
       if (newCents > agreedCents) return { status: 'overpayment' };
 
       await client.query(
-        `INSERT INTO apartado_payments (apartado_id, amount, note)
-         VALUES ($1, $2, $3)`,
-        [req.params.id, (amountCents / 100).toFixed(2), note ?? null]
+        `INSERT INTO apartado_payments (apartado_id, amount, note,
+                 currency_code, exchange_rate, amount_converted)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [
+          req.params.id,
+          (amountCents / 100).toFixed(2),
+          note ?? null,
+          currencyCode,
+          exchangeRate.toFixed(6),
+          roundMoney(amount * exchangeRate).toFixed(2),
+        ]
       );
 
       // Full payment closes the apartado; units stay out of stock (sold).

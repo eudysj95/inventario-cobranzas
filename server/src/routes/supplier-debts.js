@@ -3,6 +3,7 @@ import { requireAuth } from '../auth.js';
 import { badRequest, conflict, isDateString, isUuid, notFound } from '../http.js';
 import { withTransaction } from '../services/txn.js';
 import { toDateString } from '../lib/dates.js';
+import { getExchangeRate } from '../services/bcv.js';
 
 /**
  * Supplier debts routes (tasks 5.1 + 5.2):
@@ -132,7 +133,7 @@ export default function supplierDebtsRouter(pool) {
 
   router.post('/:id/pay', async (req, res) => {
     if (!isUuid(req.params.id)) return notFound(res, 'Supplier debt not found');
-    const { amount } = req.body ?? {};
+    const { amount, currency_code } = req.body ?? {};
 
     if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
       return badRequest(res, 'amount must be a positive number');
@@ -140,6 +141,18 @@ export default function supplierDebtsRouter(pool) {
     const amountCents = Math.round(amount * 100);
     if (amountCents <= 0) {
       return badRequest(res, 'amount must be a positive number');
+    }
+
+    // Moneda y tasa de cambio (Fase 2 multimoneda). USD es la moneda base:
+    // exchange_rate = 1 y amount_converted = amount. VES consulta el BCV.
+    const currencyCode = currency_code === 'VES' ? 'VES' : 'USD';
+    let exchangeRate = 1;
+    if (currencyCode !== 'USD') {
+      try {
+        exchangeRate = await getExchangeRate(currencyCode, 'VES');
+      } catch {
+        return res.status(502).json({ error: 'Tipo de cambio no disponible' });
+      }
     }
 
     const result = await withTransaction(pool, async (client) => {
@@ -157,8 +170,8 @@ export default function supplierDebtsRouter(pool) {
       if (amountCents > balanceCents) return { status: 'overpayment' };
 
       await client.query(
-        'INSERT INTO supplier_payments (debt_id, amount) VALUES ($1, $2)',
-        [req.params.id, (amountCents / 100).toFixed(2)]
+        'INSERT INTO supplier_payments (debt_id, amount, currency_code, exchange_rate, amount_converted) VALUES ($1, $2, $3, $4, $5)',
+        [req.params.id, (amountCents / 100).toFixed(2), currencyCode, exchangeRate.toFixed(6), roundMoney(amount * exchangeRate).toFixed(2)]
       );
 
       // A debt's lifecycle ends at balance 0 (spec: same lifecycle as

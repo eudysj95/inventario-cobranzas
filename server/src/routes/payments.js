@@ -3,6 +3,7 @@ import { requireAuth } from '../auth.js';
 import { badRequest, isUuid, notFound } from '../http.js';
 import { withTransaction } from '../services/txn.js';
 import { allocateFifo } from '../lib/fifo.js';
+import { getExchangeRate } from '../services/bcv.js';
 
 /**
  * Payments routes (task 4.4):
@@ -22,12 +23,17 @@ import { allocateFifo } from '../lib/fifo.js';
 const toCents = (n) => Math.round(n * 100);
 const toMoney = (cents) => (cents / 100).toFixed(2);
 
+/** Round a money number to cents so NUMERIC(12,2) stores an exact value. */
+function roundMoney(n) {
+  return Math.round(n * 100) / 100;
+}
+
 export default function paymentsRouter(pool) {
   const router = Router();
   router.use(requireAuth);
 
   router.post('/', async (req, res) => {
-    const { customerId, amount, note } = req.body ?? {};
+    const { customerId, amount, note, currency_code } = req.body ?? {};
 
     if (typeof customerId !== 'string' || !isUuid(customerId)) {
       return badRequest(res, 'customerId must be a valid UUID');
@@ -42,6 +48,18 @@ export default function paymentsRouter(pool) {
     const amountCents = toCents(amount);
     if (amountCents <= 0) {
       return badRequest(res, 'amount must be a positive number');
+    }
+
+    // Moneda y tasa de cambio (Fase 2 multimoneda). USD es la moneda base:
+    // exchange_rate = 1 y amount_converted = amount. VES consulta el BCV.
+    const currencyCode = currency_code === 'VES' ? 'VES' : 'USD';
+    let exchangeRate = 1;
+    if (currencyCode !== 'USD') {
+      try {
+        exchangeRate = await getExchangeRate(currencyCode, 'VES');
+      } catch {
+        return res.status(502).json({ error: 'Tipo de cambio no disponible' });
+      }
     }
 
     const result = await withTransaction(pool, async (client) => {
@@ -67,8 +85,15 @@ export default function paymentsRouter(pool) {
       if (amountCents > totalCents) return { status: 'overpayment' };
 
       const { rows: paymentRows } = await client.query(
-        'INSERT INTO payments (customer_id, amount, note) VALUES ($1, $2, $3) RETURNING id',
-        [customerId, toMoney(amountCents), note ?? null]
+        'INSERT INTO payments (customer_id, amount, note, currency_code, exchange_rate, amount_converted) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+        [
+          customerId,
+          toMoney(amountCents),
+          note ?? null,
+          currencyCode,
+          exchangeRate.toFixed(6),
+          roundMoney(amount * exchangeRate).toFixed(2),
+        ]
       );
       const paymentId = paymentRows[0].id;
 

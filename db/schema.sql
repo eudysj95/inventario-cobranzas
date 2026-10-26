@@ -33,6 +33,45 @@ CREATE TABLE IF NOT EXISTS products (
 CREATE INDEX IF NOT EXISTS products_name_idx ON products (name);
 
 -- ---------------------------------------------------------------------------
+-- currencies — monedas soportadas (ISO 4217). Una moneda base (USD);
+-- las demás se cotizan contra ella (USD→VES vía BCV). Seed idempotente.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS currencies (
+  id          UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE,
+  code        TEXT PRIMARY KEY,
+  name        TEXT NOT NULL,
+  symbol      TEXT NOT NULL DEFAULT '$',
+  locale      TEXT NOT NULL DEFAULT 'en-US',
+  is_base     BOOLEAN NOT NULL DEFAULT false,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ---------------------------------------------------------------------------
+-- exchange_rates — tasas de cambio entre monedas (origen → destino).
+-- Fuente: BCV. La restricción UNIQUE evita duplicados por par/fecha.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS exchange_rates (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  from_currency TEXT NOT NULL REFERENCES currencies (code),
+  to_currency   TEXT NOT NULL REFERENCES currencies (code),
+  rate          NUMERIC(18,6) NOT NULL CHECK (rate > 0),
+  effective_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  source        TEXT NOT NULL DEFAULT 'bcv',
+  UNIQUE (from_currency, to_currency, effective_at)
+);
+
+CREATE INDEX IF NOT EXISTS exchange_rates_pair_idx
+  ON exchange_rates (from_currency, to_currency, effective_at DESC);
+
+-- Seed monedas base y cotizada. ON CONFLICT (code) DO NOTHING lo hace
+-- idempotente ante re-migraciones.
+INSERT INTO currencies (code, name, symbol, locale, is_base)
+VALUES ('USD', 'Dólar estadounidense', '$', 'en-US', true),
+       ('VES', 'Bolívar venezolano', 'Bs.', 'es-VE', false)
+ON CONFLICT (code) DO NOTHING;
+
+-- ---------------------------------------------------------------------------
 -- product_attributes — ficha técnica clave-valor del producto (sin variantes).
 --   * product_id FK references products(id) ON DELETE CASCADE: borrar el
 --     producto borra sus atributos.
@@ -105,6 +144,11 @@ CREATE TABLE IF NOT EXISTS apartado_payments (
 CREATE INDEX IF NOT EXISTS apartado_payments_apartado_idx
   ON apartado_payments (apartado_id);
 
+ALTER TABLE apartado_payments
+  ADD COLUMN IF NOT EXISTS currency_code TEXT NOT NULL DEFAULT 'USD',
+  ADD COLUMN IF NOT EXISTS exchange_rate NUMERIC(18,6) NOT NULL DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS amount_converted NUMERIC(12,2) NOT NULL DEFAULT 0;
+
 -- ---------------------------------------------------------------------------
 -- customer_debts — one row per product line of a credit sale, grouped by a
 -- shared sale_id (no separate header table). FIFO allocation operates
@@ -132,7 +176,12 @@ CREATE INDEX IF NOT EXISTS customer_debts_fifo_idx
 CREATE INDEX IF NOT EXISTS customer_debts_status_due_idx
   ON customer_debts (status, due_date);
 CREATE INDEX IF NOT EXISTS customer_debts_product_idx
-  ON customer_debts (product_id);            -- serves the product_states view
+  ON customer_debts (product_id);
+
+ALTER TABLE customer_debts
+  ADD COLUMN IF NOT EXISTS currency_code TEXT NOT NULL DEFAULT 'USD',
+  ADD COLUMN IF NOT EXISTS exchange_rate NUMERIC(18,6) NOT NULL DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS amount_converted NUMERIC(12,2) NOT NULL DEFAULT 0;
 
 -- ---------------------------------------------------------------------------
 -- payments — abonos (free-amount installments) received from a customer.
@@ -147,6 +196,11 @@ CREATE TABLE IF NOT EXISTS payments (
 
 CREATE INDEX IF NOT EXISTS payments_customer_paid_idx
   ON payments (customer_id, paid_at);
+
+ALTER TABLE payments
+  ADD COLUMN IF NOT EXISTS currency_code TEXT NOT NULL DEFAULT 'USD',
+  ADD COLUMN IF NOT EXISTS exchange_rate NUMERIC(18,6) NOT NULL DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS amount_converted NUMERIC(12,2) NOT NULL DEFAULT 0;
 
 -- ---------------------------------------------------------------------------
 -- payment_allocations — how each payment was applied to open debts (FIFO).
@@ -182,6 +236,11 @@ CREATE TABLE IF NOT EXISTS cash_sales (
 CREATE INDEX IF NOT EXISTS cash_sales_customer_idx ON cash_sales (customer_id);
 CREATE INDEX IF NOT EXISTS cash_sales_product_idx  ON cash_sales (product_id);
 CREATE INDEX IF NOT EXISTS cash_sales_sale_idx     ON cash_sales (sale_id);
+
+ALTER TABLE cash_sales
+  ADD COLUMN IF NOT EXISTS currency_code TEXT NOT NULL DEFAULT 'USD',
+  ADD COLUMN IF NOT EXISTS exchange_rate NUMERIC(18,6) NOT NULL DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS amount_converted NUMERIC(12,2) NOT NULL DEFAULT 0;
 
 -- ---------------------------------------------------------------------------
 -- suppliers — auto-upserted by name (unique) when a supplier debt is created.
@@ -224,6 +283,11 @@ CREATE TABLE IF NOT EXISTS supplier_payments (
 
 CREATE INDEX IF NOT EXISTS supplier_payments_debt_idx
   ON supplier_payments (debt_id);
+
+ALTER TABLE supplier_payments
+  ADD COLUMN IF NOT EXISTS currency_code TEXT NOT NULL DEFAULT 'USD',
+  ADD COLUMN IF NOT EXISTS exchange_rate NUMERIC(18,6) NOT NULL DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS amount_converted NUMERIC(12,2) NOT NULL DEFAULT 0;
 
 -- ---------------------------------------------------------------------------
 -- admins — single shared admin credential set (no roles). Seeded from env

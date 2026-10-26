@@ -4,6 +4,7 @@ import { requireAuth } from '../auth.js';
 import { badRequest, isDateString, isUuid, notFound } from '../http.js';
 import { withTransaction } from '../services/txn.js';
 import { toDateString } from '../lib/dates.js';
+import { getExchangeRate } from '../services/bcv.js';
 
 /**
  * Credit-sales routes (task 4.3):
@@ -137,7 +138,7 @@ export default function creditSalesRouter(pool) {
   router.use(requireAuth);
 
   router.post('/', async (req, res) => {
-    const { customerId, lines, dueDate } = req.body ?? {};
+    const { customerId, lines, dueDate, currency_code } = req.body ?? {};
 
     if (typeof customerId !== 'string' || !isUuid(customerId)) {
       return badRequest(res, 'customerId must be a valid UUID');
@@ -177,6 +178,18 @@ export default function creditSalesRouter(pool) {
 
     // Grouping key generated server-side so every line of this sale shares it.
     const saleId = randomUUID();
+
+    // Moneda y tasa de cambio (Fase 2 multimoneda). USD es la moneda base:
+    // exchange_rate = 1 y amount_converted = amount. VES consulta el BCV.
+    const currencyCode = currency_code === 'VES' ? 'VES' : 'USD';
+    let exchangeRate = 1;
+    if (currencyCode !== 'USD') {
+      try {
+        exchangeRate = await getExchangeRate(currencyCode, 'VES');
+      } catch {
+        return res.status(502).json({ error: 'Tipo de cambio no disponible' });
+      }
+    }
 
     let result;
     try {
@@ -219,14 +232,19 @@ export default function creditSalesRouter(pool) {
 
           await client.query(
             `INSERT INTO customer_debts
-               (customer_id, product_id, sale_id, units, amount, balance, due_date)
-             VALUES ($1, $2, $3, $4, $5, $5, $6)`,
+               (customer_id, product_id, sale_id, units, amount, balance,
+                currency_code, exchange_rate, amount_converted, due_date)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
             [
               customerId,
               line.productId,
               saleId,
               line.units,
               amount.toFixed(2),
+              amount.toFixed(2),
+              currencyCode,
+              exchangeRate.toFixed(6),
+              roundMoney(amount * exchangeRate).toFixed(2),
               dueDate ?? null,
             ]
           );
