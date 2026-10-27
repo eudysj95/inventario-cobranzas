@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useConfig } from "../../api/config";
 import { useProducts } from "../../api/products";
 import { formatCurrency } from "../../lib/format";
+import { useExchangeRate } from "../../api/exchange-rate";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Card } from "../../components/ui/Card";
@@ -33,6 +34,27 @@ export default function CashSaleForm({ onSubmit, onCancel, prefillProductId }: {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Tasa de cambio USD→VES (endpoint público, sin auth).
+  const { data: rateData, isPending: ratePending, isError: rateError } = useExchangeRate();
+  const rate = rateData?.rate;
+
+  // Total en USD de las líneas: precio explícito si se indica, si no el de
+  // catálogo. Solo informativo: la creación sigue enviando USD por defecto.
+  const totalUsd = lines.reduce((sum, line) => {
+    const product = products.find((p: any) => p.id === line.productId);
+    const unitPrice = line.price !== undefined ? line.price : (product?.price ?? 0);
+    return sum + Number(line.units || 0) * unitPrice;
+  }, 0);
+
+  // Config para el monto en Bs.: moneda VES, símbolo 'Bs.', locale es-VE.
+  const VES_CONFIG = { currencySymbol: 'Bs.', currencyLocale: 'es-VE' };
+
+  const rateFormatted = new Intl.NumberFormat('es-VE', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(rate);
+
+
   function updateLine(index: number, field: string, value: any) {
     setLines((prev) => prev.map((line, i) => i === index ? { ...line, [field]: field === "units" ? (value === "" ? "" : Number(value)) : field === "price" ? (value === "" || value === null ? undefined : Number(value)) : value } : line));
   }
@@ -54,7 +76,6 @@ export default function CashSaleForm({ onSubmit, onCancel, prefillProductId }: {
   return (
     <div style={{ padding: "var(--space-4) 0", maxWidth: "48rem" }}>
       <header className="flex items-center justify-between gap-3 mb-4 flex-wrap" style={{ alignItems: "center" }}>
-        <h2 style={{ margin: 0, fontSize: "var(--text-2xl)" }}>Venta de contado</h2>
         <Button variant="secondary" onClick={onCancel}>Volver</Button>
       </header>
       {error && <div className="alert alert-error mb-4" role="alert"><span>{error}</span></div>}
@@ -64,7 +85,10 @@ export default function CashSaleForm({ onSubmit, onCancel, prefillProductId }: {
             <CustomerSelect initialCustomerId={customerId} onSelect={setCustomerId} allowCreate={true} />
             <div style={{ marginTop: "var(--space-4)" }}>
               <h3 className="mb-3" style={{ fontSize: "var(--text-lg)" }}>Líneas</h3>
-              {lines.map((line, index) => (
+              {lines.map((line, index) => {
+                const product = products.find((p: any) => p.id === line.productId);
+                const placeholderPrice = product?.price !== undefined ? String(product.price) : 'Catálogo';
+                return (
                 <div key={index} className="card p-3 mb-3" style={{ border: "1px solid var(--color-border)" }}>
                   <div className="form-row" style={{ gap: "var(--space-3)", flexWrap: "wrap", alignItems: "flex-end" }}>
                     <div className="form-row" style={{ flex: "1 1 200px", flexDirection: "column", gap: "var(--space-1)" }}>
@@ -80,15 +104,34 @@ export default function CashSaleForm({ onSubmit, onCancel, prefillProductId }: {
                     </div>
                     <div className="form-row" style={{ flex: "1 1 140px", flexDirection: "column", gap: "var(--space-1)" }}>
                       <label className="label">Precio (opcional)</label>
-                      <Input type="number" min="0.01" step="0.01" placeholder="Catálogo" value={line.price ?? ""} onChange={(e) => updateLine(index, "price", e.target.value)} disabled={submitting} />
+                      <Input type="number" min="0.01" step="0.01" placeholder={placeholderPrice} value={line.price ?? ""} onChange={(e) => updateLine(index, "price", e.target.value)} disabled={submitting} />
                     </div>
                     <Button type="button" variant="danger" size="sm" onClick={() => removeLine(index)} disabled={submitting || lines.length === 1} aria-label={`Quitar línea ${index + 1}`}>Quitar</Button>
                   </div>
                 </div>
-              ))}
+                )
+              })}
               <Button type="button" variant="secondary" size="sm" onClick={addLine} disabled={submitting}>Agregar línea</Button>
             </div>
           </div>
+          {ratePending ? (
+            <p className="text-sm" style={{ color: "var(--color-text-muted)", margin: "var(--space-2) 0 0 0" }}>
+              Obteniendo tasa de cambio…
+            </p>
+          ) : rateError || !rate ? (
+            <p className="text-sm" style={{ color: "var(--color-text-muted)", margin: "var(--space-2) 0 0 0" }}>
+              Tasa de cambio no disponible
+            </p>
+          ) : (
+            <div style={{ margin: "var(--space-4) 0 0 0", paddingTop: "var(--space-3)", borderTop: "1px solid var(--color-border)" }}>
+              <p style={{ margin: "0 0 var(--space-1) 0", fontSize: "var(--text-sm)" }}>
+                <strong>Tasa de cambio:</strong> 1 USD = {rateFormatted} VES
+              </p>
+              <p style={{ margin: 0, fontSize: "var(--text-lg)", fontWeight: "var(--font-weight-semibold)" }}>
+                <strong>Total en Bs.:</strong> {formatCurrency(totalUsd * rate, VES_CONFIG)}
+              </p>
+            </div>
+          )}
           <div className="card-footer" style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)", paddingTop: "var(--space-4)" }}>
             <Button type="button" variant="secondary" onClick={onCancel} disabled={submitting}>Cancelar</Button>
             <Button type="submit" disabled={submitting}>{submitting ? <><Spinner style={{ width: "16px", height: "16px", borderWidth: "2px" }} /> Guardando…</> : "Registrar venta"}</Button>

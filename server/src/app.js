@@ -7,6 +7,7 @@ import { csrfProtection } from './auth.js';
 import healthRouter from './routes/health.js';
 import authRouter from './routes/auth.js';
 import configRouter from './routes/config.js';
+import exchangeRateRouter from './routes/exchange-rate.js';
 import productsRouter from './routes/products.js';
 import customersRouter from './routes/customers.js';
 import apartadosRouter from './routes/apartados.js';
@@ -59,6 +60,10 @@ export function createApp({ pool } = {}) {
   // optional WhatsApp contact — the SPA renders these instead of hardcoding
   // them (design: GET /api/config, Option B multi-instance).
   app.use('/api/config', configRouter());
+
+  // Tipo de cambio USD→VES (no auth, no csrf): tasa actual del BCV con caché
+  // y fallback a BD, para mostrar el monto en Bs. de las ventas de contado.
+  app.use('/api/exchange-rate', exchangeRateRouter());
 
   // Core catalog routes (auth-guarded inside the routers).
   app.use('/api/products', csrfProtection, productsRouter(pool));

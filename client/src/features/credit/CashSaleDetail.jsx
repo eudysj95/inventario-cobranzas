@@ -32,6 +32,21 @@ export default function CashSaleDetail({ saleId }) {
     0
   );
 
+  // Config para el monto en Bs.: moneda VES, símbolo 'Bs.', locale es-VE.
+  const VES_CONFIG = { currencySymbol: 'Bs.', currencyLocale: 'es-VE' };
+
+  // Tasa usada en la venta y monto total en Bs.: valor convertido del
+  // header (amount_converted) o, como fallback, total USD × exchange_rate.
+  const exchangeRate = Number(sale.exchange_rate || 1);
+  const rateFormatted = new Intl.NumberFormat('es-VE', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(exchangeRate);
+  const totalBs =
+    sale.amount_converted != null
+      ? Number(sale.amount_converted)
+      : totalGeneral * exchangeRate;
+
   return (
     <div className="card mt-4">
       <div className="card-body">
@@ -41,6 +56,16 @@ export default function CashSaleDetail({ saleId }) {
           <p><strong>Cliente:</strong> {sale.customer_name}</p>
           <p><strong>Fecha:</strong> {formatDate(sale.created_at, config)}</p>
         </div>
+        {sale.exchange_rate != null && (
+          <div style={{ marginTop: 'var(--space-4)', paddingLeft: 'var(--space-4)', borderLeft: '3px solid var(--color-primary)', width: '100%', boxSizing: 'border-box' }}>
+            <p style={{ marginBottom: 'var(--space-1)' }}>
+              <strong>Tasa de cambio:</strong> 1 USD = {rateFormatted} VES
+            </p>
+            <p>
+              <strong>Total en Bs.:</strong> {formatCurrency(totalBs, VES_CONFIG)}
+            </p>
+          </div>
+        )}
 
         {sale.lines.length === 0 ? (
           <p className="empty-state">No hay líneas en esta venta.</p>

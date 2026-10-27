@@ -208,6 +208,19 @@ small { font-size: var(--text-sm); color: var(--color-text-secondary); }
 }
 .table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
 .table th, .table td { padding: var(--space-2) var(--space-3); text-align: left; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
+
+/* Ocultar etiqueta "Acciones" solo en pantallas muy estrechas (<450px) para que los botones quepan en una línea */
+@media (max-width: 449px) {
+  td[data-label="Acciones"] {
+    justify-content: center;
+  }
+
+  td[data-label="Acciones"]::before {
+    content: none;
+  }
+}
+.table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+.table th, .table td { padding: var(--space-2) var(--space-3); text-align: left; vertical-align: middle; }
 .table th { font-weight: var(--font-weight-semibold); color: var(--color-text-secondary); font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.05em; background: var(--color-bg); position: sticky; top: 0; z-index: 1; }
 .table tbody tr { transition: background var(--transition-fast); }
 .table tbody tr:hover { background: var(--color-surface-hover); }

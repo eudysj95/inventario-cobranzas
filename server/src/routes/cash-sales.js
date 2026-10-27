@@ -37,7 +37,10 @@ class CashSaleAbort extends Error {
 async function fetchSale(pool, saleId) {
   const { rows } = await pool.query(
     `SELECT cs.sale_id AS id, cs.customer_id, c.name AS customer_name,
-            MIN(cs.created_at) AS created_at, SUM(cs.amount) AS total
+            MIN(cs.created_at) AS created_at, SUM(cs.amount) AS total,
+            MIN(cs.currency_code) AS currency_code,
+            MIN(cs.exchange_rate) AS exchange_rate,
+            MIN(cs.amount_converted) AS amount_converted
      FROM cash_sales cs
      JOIN customers c ON c.id = cs.customer_id
      WHERE cs.sale_id = $1
@@ -60,6 +63,9 @@ async function fetchSale(pool, saleId) {
     customer_name: rows[0].customer_name,
     created_at: rows[0].created_at,
     total: Number(rows[0].total),
+    currency_code: rows[0].currency_code,
+    exchange_rate: Number(rows[0].exchange_rate),
+    amount_converted: Number(rows[0].amount_converted),
     lines: lines.map((r) => ({
       ...r,
       amount: Number(r.amount),
@@ -166,16 +172,14 @@ export default function cashSalesRouter(pool) {
     // Grouping key generated server-side so every line of this sale shares it.
     const saleId = randomUUID();
 
-    // Moneda y tasa de cambio (Fase 2 multimoneda). USD es la moneda base:
-    // exchange_rate = 1 y amount_converted = amount. VES consulta el BCV.
-    const currencyCode = currency_code === 'VES' ? 'VES' : 'USD';
-    let exchangeRate = 1;
-    if (currencyCode !== 'USD') {
-      try {
-        exchangeRate = await getExchangeRate(currencyCode, 'VES');
-      } catch {
-        return res.status(502).json({ error: 'Tipo de cambio no disponible' });
-      }
+    // Moneda y tasa de cambio (Fase 2 multimoneda). La venta se factura en USD
+    // (moneda base del cliente) y se convierte a VES con la tasa BCV vigente.
+    const currencyCode = 'USD';
+    let exchangeRate;
+    try {
+      exchangeRate = await getExchangeRate('USD', 'VES', pool);
+    } catch {
+      return res.status(502).json({ error: 'Tipo de cambio no disponible' });
     }
 
     let result;
